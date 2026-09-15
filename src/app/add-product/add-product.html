@@ -1,9 +1,9 @@
 <main class="add-product-page">
 	<section class="form-card" aria-labelledby="add-product-title">
 		<a class="back-link" routerLink="/products-list">&larr; Retour aux produits</a>
-		<p class="eyebrow">NOUVEL INVENTAIRE</p>
-		<h1 id="add-product-title">Ajouter un produit</h1>
-		<p class="intro">Référencez un nouvel équipement informatique dans votre inventaire.</p>
+		<p class="eyebrow">{{ productToEdit ? 'MODIFICATION PRODUIT' : 'NOUVEL INVENTAIRE' }}</p>
+		<h1 id="add-product-title">{{ productToEdit ? 'Modifier le produit' : 'Ajouter un produit' }}</h1>
+		<p class="intro">{{ productToEdit ? 'Mettez à jour les informations de cet équipement.' : 'Référencez un nouvel équipement informatique dans votre inventaire.' }}</p>
 
 		<form [formGroup]="productForm" (ngSubmit)="submit()" novalidate>
 			<div class="form-grid">
@@ -51,7 +51,7 @@
 
 			<div class="form-actions">
 				<a class="secondary-action" routerLink="/products-list">Annuler</a>
-				<button class="primary-action" type="submit">Ajouter le produit</button>
+				<button class="primary-action" type="submit">{{ productToEdit ? 'Enregistrer les modifications' : 'Ajouter le produit' }}</button>
 			</div>
 		</form>
 	</section>

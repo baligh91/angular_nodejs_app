@@ -121,6 +121,22 @@ td { color: #52615a; font-size: .9rem; }
 .disponible { background: #dceee4; color: #286044; }
 .stock-faible { background: #f9e7c8; color: #8a5b12; }
 .rupture { background: #f5d9d5; color: #95463d; }
+.actions-cell { display: flex; gap: .5rem; }
+.edit-button, .delete-button {
+	min-height: 2rem;
+	padding: .4rem .7rem;
+	border: 1px solid;
+	border-radius: 2px;
+	background: transparent;
+	cursor: pointer;
+	font: inherit;
+	font-size: .78rem;
+	font-weight: 700;
+}
+.edit-button { border-color: #3a6558; color: #3a6558; }
+.edit-button:hover { background: #3a6558; color: #fff; }
+.delete-button { border-color: #b65c39; color: #a14528; }
+.delete-button:hover { background: #b65c39; color: #fff; }
 .empty-state { padding: 4rem 1.5rem; text-align: center; }
 .empty-state p { color: #718078; }
 

@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { ProductCategory } from '../models/product.model';
+import { Router, RouterLink } from '@angular/router';
+import { Product, ProductCategory } from '../models/product.model';
 import { ProductsStore } from '../services/products.store';
 
 @Component({
@@ -15,6 +15,7 @@ import { ProductsStore } from '../services/products.store';
 })
 export class ProductsList {
   private readonly productsStore = inject(ProductsStore);
+  private readonly router = inject(Router);
   // Signal modifiable contenant le texte saisi dans la recherche.
   protected readonly searchTerm = signal('');
 
@@ -48,5 +49,17 @@ export class ProductsList {
     // set() modifie les signaux et déclenche la mise à jour du template.
     this.searchTerm.set('');
     this.selectedCategory.set('Toutes');
+  }
+
+  protected editProduct(product: Product): void {
+    void this.router.navigate(['/add-product'], { state: { product } });
+  }
+
+  protected async deleteProduct(product: Product): Promise<void> {
+    await this.productsStore.deleteProduct(product.reference);
+  }
+
+  protected async selectProduct(product: Product): Promise<void> {
+   void this.router.navigate(['/product', product.reference]);
   }
 }

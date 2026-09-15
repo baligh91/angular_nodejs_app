@@ -20,7 +20,7 @@ app.use(express.static(join(import.meta.dirname, 'public')));
 app.use('/api', (request, response, next) => {
 	response.header('Access-Control-Allow-Origin', 'http://localhost:4200');
 	response.header('Access-Control-Allow-Headers', 'Content-Type');
-	response.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+	response.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
 	if (request.method === 'OPTIONS') {
 		response.sendStatus(204);
 		return;

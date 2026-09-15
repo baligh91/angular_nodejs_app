@@ -15,14 +15,37 @@ type ProductRow = {
 
 router.get('/', (_request, response) => {
   database.query(
-    'SELECT id, name, category, reference, stock, price, status FROM products ORDER BY id DESC',
+    'SELECT * FROM products ORDER BY id DESC',
     (error, results) => {
       if (error) {
         response.status(500).json({ message: 'Impossible de récupérer les produits.' });
         return;
       }
 
-      response.json(results as ProductRow[]);
+      const products = results as ProductRow[];
+      response.json(products);
+    },
+  );
+});
+
+router.get('/:reference', (_request, response) => {
+  database.query(
+    'SELECT * FROM products WHERE reference = ? ',
+    [ _request.params['reference'] ],
+    (error, results) => {
+      if (error) {
+        response.status(500).json({ message: 'Impossible de récupérer les produits.' });
+        return;
+      }
+
+      const product = (results as ProductRow[])[0];
+
+      if (!product) {
+        response.status(404).json({ message: 'Produit introuvable.' });
+        return;
+      }
+
+      response.json(product);
     },
   );
 });
@@ -67,6 +90,63 @@ router.post('/', (request, response) => {
         price,
         status,
       });
+    },
+  );
+});
+
+router.put('/:reference', (request, response) => {
+  const { name, category, reference, stock, price } = request.body as Record<string, unknown>;
+
+  if (
+    typeof name !== 'string' ||
+    typeof category !== 'string' ||
+    typeof reference !== 'string' ||
+    typeof stock !== 'number' ||
+    typeof price !== 'number' ||
+    stock < 0 ||
+    price < 0
+  ) {
+    response.status(400).json({ message: 'Les données du produit sont invalides.' });
+    return;
+  }
+
+  const status = stock === 0 ? 'Rupture' : stock <= 3 ? 'Stock faible' : 'Disponible';
+
+  database.query(
+    'UPDATE products SET name = ?, category = ?, reference = ?, stock = ?, price = ?, status = ? WHERE reference = ?',
+    [name, category, reference, stock, price, status, request.params['reference']],
+    (error, result) => {
+      if (error) {
+        response.status(500).json({ message: 'Impossible de modifier le produit.' });
+        return;
+      }
+
+      if ((result as { affectedRows: number }).affectedRows === 0) {
+        response.status(404).json({ message: 'Produit introuvable.' });
+        return;
+      }
+
+      response.json({ name, category, reference, stock, price, status });
+    },
+  );
+});
+
+router.delete('/:reference', (request, response) => {
+  database.query(
+    'DELETE FROM products WHERE reference = ?',
+    [request.params['reference']],
+    (error, result) => {
+      if (error) {
+        response.status(500).json({ message: 'Impossible de supprimer le produit.' });
+        return;
+      }
+
+      if ((result as { affectedRows: number }).affectedRows === 0) {
+        response.status(404).json({ message: 'Produit introuvable.' });
+        return;
+      }
+
+      response.sendStatus(204);
     },
   );
 });

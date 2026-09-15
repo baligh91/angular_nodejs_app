@@ -52,11 +52,12 @@
                         <th scope="col">Stock</th>
                         <th scope="col">Prix unitaire</th>
                         <th scope="col">État</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (product of filteredProducts(); track product.reference) {
-                    <tr>
+                    <tr (click)="selectProduct(product)">
                         <td class="product-name">{{ product.name }}</td>
                         <td>{{ product.category }}</td>
                         <td class="reference">{{ product.reference }}</td>
@@ -64,6 +65,10 @@
                         <td>{{ product.price | currency:'EUR':'symbol':'1.0-0' }}</td>
                         <td><span class="status" [class]="product.status.toLowerCase().replace(' ', '-')">{{
                                 product.status }}</span></td>
+                        <td class="actions-cell">
+                            <button class="edit-button" type="button" (click)="editProduct(product)">Modifier</button>
+                            <button class="delete-button" type="button" (click)="deleteProduct(product)">Supprimer</button>
+                        </td>
                     </tr>
                     }
                 </tbody>
