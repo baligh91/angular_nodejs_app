@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  color: #17231f;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.home-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, .7fr);
+  gap: clamp(2rem, 8vw, 8rem);
+  align-items: end;
+  min-height: 100vh;
+  padding: clamp(2rem, 8vw, 7rem) clamp(1.25rem, 8vw, 8rem);
+  background: #e9eee9;
+}
+
+.hero { max-width: 760px; }
+.eyebrow { margin: 0 0 1.2rem; color: #b65c39; font-family: Arial, sans-serif; font-size: .72rem; font-weight: 800; letter-spacing: .16em; }
+h1 { max-width: 740px; margin: 0; font-size: clamp(3rem, 7vw, 7.5rem); font-weight: 400; letter-spacing: -.04em; line-height: .91; }
+.intro { max-width: 520px; margin: 2rem 0; color: #60706a; font-family: Arial, sans-serif; font-size: 1.05rem; line-height: 1.6; }
+.primary-action { display: inline-flex; align-items: center; gap: 1.5rem; padding: .95rem 1.15rem; background: #3a6558; color: #fff; font-family: Arial, sans-serif; font-size: .85rem; font-weight: 700; text-decoration: none; transition: background .2s ease, transform .2s ease; }
+.primary-action:hover { background: #17231f; transform: translateY(-2px); }
+.primary-action span { font-size: 1.2rem; }
+.home-note { align-self: end; padding: 1.5rem 0 0; border-top: 2px solid #b65c39; font-family: Arial, sans-serif; }
+.note-mark { display: block; margin-bottom: 1.4rem; color: #b65c39; font-size: 2rem; line-height: 1; }
+.home-note strong { font-size: .95rem; }
+.home-note p { margin: .5rem 0 0; color: #60706a; font-size: .8rem; line-height: 1.5; }
+
+@media (max-width: 700px) {
+  .home-page { grid-template-columns: 1fr; align-content: center; gap: 3rem; }
+}

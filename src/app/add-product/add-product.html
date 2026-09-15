@@ -1,0 +1,58 @@
+<main class="add-product-page">
+	<section class="form-card" aria-labelledby="add-product-title">
+		<a class="back-link" routerLink="/products-list">&larr; Retour aux produits</a>
+		<p class="eyebrow">NOUVEL INVENTAIRE</p>
+		<h1 id="add-product-title">Ajouter un produit</h1>
+		<p class="intro">Référencez un nouvel équipement informatique dans votre inventaire.</p>
+
+		<form [formGroup]="productForm" (ngSubmit)="submit()" novalidate>
+			<div class="form-grid">
+				<label>
+					<span>Nom du produit</span>
+					<input type="text" formControlName="name" placeholder="Ex. Lenovo ThinkPad X1" />
+					@if (productForm.controls.name.touched && productForm.controls.name.invalid) {
+						<small>Le nom doit contenir au moins 3 caractères.</small>
+					}
+				</label>
+
+				<label>
+					<span>Catégorie</span>
+					<select formControlName="category">
+						@for (category of categories; track category) {
+							<option [value]="category">{{ category }}</option>
+						}
+					</select>
+				</label>
+
+				<label>
+					<span>Référence</span>
+					<input type="text" formControlName="reference" placeholder="Ex. LEN-X1-2026" />
+					@if (productForm.controls.reference.touched && productForm.controls.reference.invalid) {
+						<small>La référence est obligatoire.</small>
+					}
+				</label>
+
+				<label>
+					<span>Stock initial</span>
+					<input type="number" min="0" formControlName="stock" />
+					@if (productForm.controls.stock.touched && productForm.controls.stock.invalid) {
+						<small>Le stock doit être supérieur ou égal à 0.</small>
+					}
+				</label>
+
+				<label>
+					<span>Prix unitaire (€)</span>
+					<input type="number" min="0.01" step="0.01" formControlName="price" />
+					@if (productForm.controls.price.touched && productForm.controls.price.invalid) {
+						<small>Le prix doit être supérieur à 0.</small>
+					}
+				</label>
+			</div>
+
+			<div class="form-actions">
+				<a class="secondary-action" routerLink="/products-list">Annuler</a>
+				<button class="primary-action" type="submit">Ajouter le produit</button>
+			</div>
+		</form>
+	</section>
+</main>

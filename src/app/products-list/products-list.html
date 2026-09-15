@@ -1,0 +1,80 @@
+<main class="products-page">
+    <header class="page-header">
+        <div>
+            <a class="back-link" routerLink="/">&larr; Retour à l'accueil</a>
+            <p class="eyebrow">CATALOGUE PRODUITS</p>
+            <h1>Liste des produits</h1>
+            <p class="page-intro">Suivez les équipements informatiques disponibles dans votre inventaire.</p>
+        </div>
+        <div class="stock-summary">
+            <span class="summary-label">Stock total</span>
+            <strong>{{ totalStock() }}</strong>
+            <span>unités référencées</span>
+        </div>
+    </header>
+
+    <section class="toolbar" aria-label="Filtres des produits">
+        <label class="search-field">
+            <span>Rechercher</span>
+            <input type="search" placeholder="Nom ou référence" [ngModel]="searchTerm()"
+                (ngModelChange)="searchTerm.set($event)" />
+        </label>
+        <label class="category-field">
+            <span>Catégorie</span>
+            <select [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event)">
+                <option value="Toutes">Toutes les catégories</option>
+                <option value="Ordinateurs">Ordinateurs</option>
+                <option value="Écrans">Écrans</option>
+                <option value="Accessoires">Accessoires</option>
+            </select>
+        </label>
+        <button class="reset-button" type="button" (click)="resetFilters()">Réinitialiser</button>
+    </section>
+
+    <section class="table-shell" aria-labelledby="products-table-title">
+        <div class="table-heading">
+            <div>
+                <h2 id="products-table-title">Équipements référencés</h2>
+                <span>{{ filteredProducts().length }} résultat{{ filteredProducts().length > 1 ? 's' : '' }}</span>
+            </div>
+             <button class="reset-button" type="button"  routerLink="/add-product">Ajouter un produit</button>
+  
+        </div>
+
+        @if (filteredProducts().length > 0) {
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Produit</th>
+                        <th scope="col">Catégorie</th>
+                        <th scope="col">Référence</th>
+                        <th scope="col">Stock</th>
+                        <th scope="col">Prix unitaire</th>
+                        <th scope="col">État</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (product of filteredProducts(); track product.reference) {
+                    <tr>
+                        <td class="product-name">{{ product.name }}</td>
+                        <td>{{ product.category }}</td>
+                        <td class="reference">{{ product.reference }}</td>
+                        <td>{{ product.stock }}</td>
+                        <td>{{ product.price | currency:'EUR':'symbol':'1.0-0' }}</td>
+                        <td><span class="status" [class]="product.status.toLowerCase().replace(' ', '-')">{{
+                                product.status }}</span></td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        } @else {
+        <div class="empty-state">
+            <strong>Aucun produit trouvé</strong>
+            <p>Modifiez votre recherche ou réinitialisez les filtres.</p>
+            <button class="reset-button" type="button" (click)="resetFilters()">Réinitialiser les filtres</button>
+        </div>
+        }
+    </section>
+</main>

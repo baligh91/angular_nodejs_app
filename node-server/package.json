@@ -1,0 +1,26 @@
+{
+  "name": "node-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node --env-file-if-exists=.env ./dist/bin/www.js"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "^4.22.3",
+    "http-errors": "~1.6.3",
+    "morgan": "^1.12.1",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/debug": "^4.1.13",
+    "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^26.5.1",
+    "typescript": "^7.0.2"
+  }
+}
