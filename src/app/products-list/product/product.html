@@ -5,13 +5,23 @@
 		<section class="product-layout" aria-labelledby="product-title">
 			<article class="product-card">
 				<p class="eyebrow">FICHE PRODUIT</p>
-				<p class="product-category">{{ currentProduct.category }}</p>
-				<h1 id="product-title">{{ currentProduct.name }}</h1>
-				<p class="reference">Référence {{ currentProduct.reference }}</p>
-
-				<div class="product-price">{{ currentProduct.price | currency:'EUR':'symbol':'1.0-2' }}</div>
-
 				<dl class="product-details">
+					<div>
+						<dt>Produit</dt>
+						<dd id="product-title">{{ currentProduct.name }}</dd>
+					</div>
+					<div>
+						<dt>Catégorie</dt>
+						<dd>{{ currentProduct.category }}</dd>
+					</div>
+					<div>
+						<dt>Référence</dt>
+						<dd class="reference">{{ currentProduct.reference }}</dd>
+					</div>
+					<div>
+						<dt>Prix unitaire</dt>
+						<dd>{{ currentProduct.price | currency:'EUR':'symbol':'1.0-2' }}</dd>
+					</div>
 					<div>
 						<dt>Stock disponible</dt>
 						<dd>{{ currentProduct.stock }} unité{{ currentProduct.stock > 1 ? 's' : '' }}</dd>
@@ -27,19 +37,21 @@
 				<p class="eyebrow">PARTAGE CLIENT</p>
 				<h2 id="share-title">Envoyer cette fiche</h2>
 				<p>Préparez un e-mail avec les informations du produit pour votre client.</p>
-				<label for="recipient-email">E-mail du client</label>
-				<input
-					id="recipient-email"
-					type="email"
-					placeholder="client@exemple.com"
-					[ngModel]="recipientEmail()"
-					(ngModelChange)="recipientEmail.set($event)"
-				/>
-				@if (mailtoLink(); as link) {
-					<a class="email-button" [href]="link">Envoyer par e-mail</a>
-				} @else {
-					<button class="email-button" type="button" disabled>Envoyer par e-mail</button>
-				}
+				<div class="email-form">
+					<label for="recipient-email">E-mail du client</label>
+					<input
+						id="recipient-email"
+						type="email"
+						placeholder="client@exemple.com"
+						[ngModel]="recipientEmail()"
+						(ngModelChange)="recipientEmail.set($event)"
+					/>
+					@if (mailtoLink(); as link) {
+						<a class="email-button" [href]="link">Envoyer par e-mail</a>
+					} @else {
+						<button class="email-button" type="button" disabled>Envoyer par e-mail</button>
+					}
+				</div>
 			</aside>
 		</section>
 	} @else {
