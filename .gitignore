@@ -8,11 +8,13 @@
 
 # Node
 /node_modules
-/node-server/node_modules
-/node-server/dist
+/backend/node_modules
+/backend/dist
+/backend/coverage
+/backend/.env
+/.env
 npm-debug.log
 yarn-error.log
-node-server/.env
 
 # IDEs and editors
 .idea/

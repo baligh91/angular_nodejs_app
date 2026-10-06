@@ -5,6 +5,8 @@ import {
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
 import express from 'express';
+import httpProxy from 'http-proxy';
+import { ServerResponse } from 'node:http';
 import { join } from 'node:path';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
@@ -12,17 +14,32 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
-/**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
- */
+const apiTarget = new URL(process.env['FML_API_URL'] || 'http://127.0.0.1:3000');
+if (!['http:', 'https:'].includes(apiTarget.protocol)) {
+  throw new Error('FML_API_URL must be an HTTP(S) backend origin');
+}
+
+const apiProxy = httpProxy.createProxyServer({
+  target: apiTarget.origin,
+  changeOrigin: true,
+  proxyTimeout: 180000,
+});
+apiProxy.on('error', (error, _request, response) => {
+  console.error('FML API proxy failed:', error.message);
+  if (response instanceof ServerResponse && !response.headersSent) {
+    response.writeHead(502, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({ message: 'FML API is unavailable. Please try again.' }));
+  }
+});
+
+// Keep /api intact and proxy the body stream before any JSON middleware.
+app.use((request, response, next) => {
+  if (request.path === '/api' || request.path.startsWith('/api/')) {
+    apiProxy.web(request, response);
+    return;
+  }
+  next();
+});
 
 /**
  * Serve static files from /browser
