@@ -1,59 +1,69 @@
-# AngularNodejsApp
+# Fantasy Manager League
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.13.
+Application FML simplifiée : un compte par ID FPL, une équipe de cinq managers, un score pour chaque GW terminée et un cumul de saison.
 
-## Development server
+## Architecture
 
-To start a local development server, run:
+- Frontend : Angular 21, écran de connexion, dashboard et éditeur d’équipe.
+- API : NestJS, login FPL, recherche de managers dans une ligue classique publique et calcul des scores.
+- MongoDB : une seule collection, `users`. L’identité, l’équipe, les snapshots de roster et les scores sont intégrés dans le document utilisateur.
+- Format unique : 5 managers, budget 25M, capitaine à points doubles.
 
-```bash
-ng serve
+## Connexion
+
+Sur `/fml/connect`, saisir l’ID FPL public. L’application récupère le prénom, le nom et le nom d’équipe FPL, puis ouvre une session.
+
+**Risque important :** l’ID FPL est public, pas un secret. Toute personne qui le connaît peut se connecter à ce compte et modifier son équipe FML. Ce mode ne protège pas l’identité et ne doit pas être présenté comme une authentification sûre.
+
+## Équipe et scores
+
+Dans « My team », les ligues classiques publiques de l’utilisateur sont chargées depuis son profil FPL; la ligue actuelle est présélectionnée, sinon la première ligue disponible. Ses managers sont chargés automatiquement. Choisir exactement cinq managers, un capitaine et un nom d’équipe. Le coût est calculé depuis le rang FPL avec le budget de 25M.
+
+Les scores sont la somme des points GW FPL des cinq managers; le capitaine compte double. Avant chaque deadline, le roster et le capitaine sont figés comme snapshot. Chaque score GW, son roster source et le cumul restent dans le même document Mongo. Le bouton « Update scores » synchronise les GW finalisées et prépare les snapshots futurs; le backend effectue aussi une synchronisation horaire.
+
+## Lancement local
+
+Prérequis : Node.js 22, npm 10 et MongoDB local ou distant.
+
+```powershell
+npm ci
+Set-Location backend
+npm ci
+Copy-Item .env.example .env
+# Configurer MONGODB_URI, JWT_SECRET (32 caractères minimum) et APP_ORIGIN.
+npm run start:dev
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Dans un autre terminal à la racine :
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```powershell
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Frontend : http://localhost:4200/fml · API : http://localhost:3000/api · Santé : `/api/health`.
+Le proxy Angular transmet `/api` à NestJS.
 
-```bash
-ng generate --help
+Pour une ancienne base FML, vérifier d’abord la migration :
+
+```powershell
+Set-Location backend
+npm run migrate:single-collection
 ```
 
-## Building
+La commande est en simulation par défaut. Si le résumé est correct et que les équipes/scorings à conserver sont bien détectés, appliquer la migration destructive qui intègre les équipes dans `users` et supprime les anciennes collections :
 
-To build the project run:
-
-```bash
-ng build
+```powershell
+npm run migrate:single-collection -- --apply
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Vérification
 
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
+```powershell
+npm run build
+npm test -- --watch=false
+Set-Location backend
+npm run build
+npm test
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+`COOKIE_SECURE=false` est réservé au développement HTTP local. Le login par ID seul est inadapté à un service public avec de vrais comptes; une preuve secrète ou une authentification distincte sera nécessaire avant tout déploiement public.

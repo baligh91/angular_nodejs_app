@@ -1,0 +1,42 @@
+.football-pitch {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(84px, auto));
+  gap: 12px 10px;
+  align-items: center;
+  min-height: 330px;
+  padding: 26px 14px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  border-radius: 7px;
+  background: repeating-linear-gradient(0deg, #4d9b68 0 70px, #438a5b 70px 140px);
+  box-shadow: 0 0 0 1px #2f7148;
+}
+
+.pitch-markings { position: absolute; inset: 10px; border: 1px solid #ffffffb8; pointer-events: none; }
+.pitch-halfway { position: absolute; top: 50%; right: 0; left: 0; border-top: 1px solid #ffffffb8; }
+.pitch-centre { position: absolute; top: 50%; left: 50%; width: 58px; aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid #ffffffb8; border-radius: 50%; }
+.pitch-box { position: absolute; left: 28%; width: 44%; height: 36px; border: 1px solid #ffffffb8; }
+.pitch-box-top { top: 0; border-top: 0; }
+.pitch-box-bottom { bottom: 0; border-bottom: 0; }
+.pitch-player { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; justify-self: center; width: min(100%, 270px); min-width: 0; min-height: 58px; padding: 8px; border: 1px solid #d8e8dc; border-radius: 5px; color: #183b2a; background: #fff; text-align: left; box-shadow: 0 3px 9px #163f2b26; }
+button.pitch-player { cursor: pointer; }
+.pitch-player:focus-visible { outline: 3px solid #e34b72; outline-offset: 2px; }
+.pitch-player.active { border: 3px solid #e34b72; padding: 6px; }
+.pitch-player.pitch-forward { grid-column: 1 / -1; grid-row: 1; }
+.pitch-player.pitch-midfield-left, .pitch-player.pitch-midfield-right { grid-row: 2; }
+.pitch-player.pitch-defence-left, .pitch-player.pitch-defence-right { grid-row: 3; }
+.pitch-player.pitch-midfield-left, .pitch-player.pitch-defence-left { grid-column: 1; }
+.pitch-player.pitch-midfield-right, .pitch-player.pitch-defence-right { grid-column: 2; }
+.shirt-mark { display: grid; flex: 0 0 32px; width: 32px; height: 30px; place-items: center; border-radius: 10px 10px 4px 4px; color: #fff; background: #e34b72; font-size: .75rem; font-weight: 800; }
+.field-name { display: grid; gap: 2px; min-width: 0; }
+.field-name strong { overflow-wrap: anywhere; }
+.field-name small { color: #5e7065; }
+.empty-slot { justify-content: center; border-style: dashed; color: #fff; background: #174c35a6; box-shadow: none; text-align: center; }
+@media (max-width: 560px) {
+  .football-pitch { grid-template-rows: repeat(3, minmax(74px, auto)); gap: 8px 6px; min-height: 300px; padding: 22px 8px; }
+  .pitch-player { gap: 6px; padding: 6px; font-size: .85rem; }
+  .pitch-player.active { padding: 4px; }
+  .shirt-mark { flex-basis: 27px; width: 27px; height: 27px; }
+}

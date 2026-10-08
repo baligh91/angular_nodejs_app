@@ -1,0 +1,37 @@
+.stats-grid > div {
+	min-width: 0;
+	padding: 8px 12px;
+	border-left: 3px solid #d7e9dc;
+}
+
+.stats-grid > div:first-child {
+	border-left-color: #08794f;
+}
+
+.stats-grid span {
+	color: #607367;
+	font-size: .9rem;
+}
+
+.current-team {
+	background: #e8f5ec;
+	box-shadow: inset 3px 0 #08794f;
+}
+
+.current-team th,
+.current-team td {
+	color: #164b34;
+	font-weight: 700;
+}
+
+@media (max-width: 600px) {
+	.stats-grid > div {
+		padding: 10px 8px;
+		border-left: 0;
+		border-top: 1px solid #dce7df;
+	}
+
+	.stats-grid > div:first-child {
+		border-top: 0;
+	}
+}
