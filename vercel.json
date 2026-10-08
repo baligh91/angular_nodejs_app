@@ -1,17 +1,18 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "framework": null,
   "installCommand": "npm ci && npm --prefix backend ci",
   "buildCommand": "npm run build && npm --prefix backend run build",
   "outputDirectory": "dist/angular-nodejs-app/browser",
   "functions": {
-    "api/[...path].ts": {
+    "api/**/*.ts": {
       "maxDuration": 300
     }
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/:path((?!api/).*)",
       "destination": "/index.csr.html"
     }
   ],
