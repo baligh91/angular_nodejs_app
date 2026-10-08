@@ -126,8 +126,8 @@
                         aria-label="Close manager table">Close</button>
                 </div>
                 @if (activeManager(); as manager) { <button mat-stroked-button type="button" class="remove-manager"
-                    [disabled]="editsLocked()" (click)="removeManager()">Remove {{manager.name}}</button> }
-                <h3>{{activeManager() ? 'Replacement options' : 'Available managers'}} <span
+                    [disabled]="editsLocked()" (click)="removeManager()" [attr.aria-label]="'Remove ' + manager.name + ' from team'">Remove from team</button> }
+                <h3>{{activeManager() ? 'Replacement suggestions' : 'Available managers'}} <span
                         class="muted">{{suggestions().length}}</span></h3>
                 @if (suggestions().length) {
                 <div class="table-scroll replacement-table">
@@ -138,7 +138,7 @@
                                 <th scope="col">Manager</th>
                                 <th scope="col">Price</th>
                                 <th scope="col">Rank</th>
-                                <th scope="col">Total</th>
+                                <th scope="col">Total points</th>
                                 <th scope="col">Last GW</th>
                                 <th scope="col">Action</th>
                             </tr>

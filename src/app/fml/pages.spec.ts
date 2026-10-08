@@ -69,7 +69,10 @@ describe('single-document FML workflow', () => {
     const pool = http.expectOne('/api/team/managers?leagueFplId=999001');
     pool.flush({ leagueFplId: 999001, leagueName: 'Public league', managers });
     const selected = managers.slice(-5);
-    for (const manager of selected) page.addManager(manager.fplId);
+    for (const manager of selected) {
+      page.selectEmptySlot(page.selectedIds().length);
+      page.addManager(manager.fplId);
+    }
     page.captainId.set(selected[0].fplId);
     page.selectManager(selected[0].fplId);
     fixture.detectChanges();
@@ -119,20 +122,20 @@ describe('single-document FML workflow', () => {
   });
 
   it('clears the selected roster and captain when changing leagues', () => {
-    const existing = {
-      ...emptyTeam, name: 'My five', leagueFplId: 999001,
-      leagueName: 'First league', managerIds: managers.slice(0, 5).map((manager) => manager.fplId),
-      captainId: managers[0].fplId,
-    };
     const fixture = TestBed.createComponent(TeamEditor);
-    http.expectOne('/api/team').flush(existing);
+    http.expectOne('/api/team').flush(emptyTeam);
     http.expectOne('/api/team/leagues').flush([
       { id: 999001, name: 'First league' }, { id: 999002, name: 'Second league' },
     ]);
     const page = fixture.componentInstance;
+    page.changeLeague(999001);
     http.expectOne('/api/team/managers?leagueFplId=999001').flush({
       leagueFplId: 999001, leagueName: 'First league', managers,
     });
+    for (const manager of managers.slice(-5)) {
+      page.selectEmptySlot(page.selectedIds().length);
+      page.addManager(manager.fplId);
+    }
     expect(page.selectedIds()).toHaveLength(5);
     page.changeLeague(999002);
     expect(page.selectedIds()).toEqual([]);
@@ -140,7 +143,7 @@ describe('single-document FML workflow', () => {
     http.expectOne('/api/team/managers?leagueFplId=999002').flush({
       leagueFplId: 999002, leagueName: 'Second league', managers,
     });
-    expect(page.team()?.leagueFplId).toBe(999001);
+    expect(page.team()?.leagueFplId).toBeNull();
     expect(page.selectedLeagueId()).toBe(999002);
   });
 
