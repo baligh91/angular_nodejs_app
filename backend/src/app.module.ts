@@ -8,7 +8,7 @@ import { AuthGuard, AuthService } from './application/auth';
 import { TeamService } from './application/team';
 import { ScoringService } from './application/scoring';
 import {
-  AuthController, HealthController, TeamController,
+  AuthController, CronController, HealthController, TeamController,
 } from './presentation/single-controller';
 
 @Module({
@@ -32,7 +32,7 @@ class FantasyModule {}
     InfrastructureModule, AuthModule, FantasyModule, JwtModule.register({}),
     ScheduleModule.forRoot(), ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, CronController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },

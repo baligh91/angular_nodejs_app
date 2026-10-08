@@ -88,16 +88,26 @@ describe('FML authentication', () => {
     expect(auth.authenticated()).toBe(false);
     expect(auth.token()).toBeNull();
   });
-  it('creates a session directly from an FPL ID', async () => {
-    const login = firstValueFrom(auth.login(123456));
-    const request = http.expectOne('/api/auth/fpl/login');
-    expect(request.request.body).toEqual({ fplId: 123456 });
+  it('creates a session by signing in with an FPL ID and password', async () => {
+    const login = firstValueFrom(auth.login(123456, 'correct horse battery staple'));
+    const request = http.expectOne('/api/auth/login');
+    expect(request.request.body).toEqual({ fplId: 123456, password: 'correct horse battery staple' });
     expect(request.request.headers.has('Authorization')).toBe(false);
     expect(request.request.withCredentials).toBe(true);
     request.flush(session);
     expect(await login).toEqual(session);
     expect(auth.authenticated()).toBe(true);
     expect(auth.token()).toBe(session.accessToken);
+  });
+  it('registers with the FPL ID and chosen password', async () => {
+    const registration = firstValueFrom(auth.register(123456, 'correct horse battery staple'));
+    const request = http.expectOne('/api/auth/register');
+    expect(request.request.body).toEqual({ fplId: 123456, password: 'correct horse battery staple' });
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(session);
+    expect(await registration).toEqual(session);
+    expect(auth.authenticated()).toBe(true);
   });
   it('sends unauthenticated navigation to FPL connection with the return URL', async () => {
     const guard = TestBed.runInInjectionContext(() => authGuard({} as ActivatedRouteSnapshot, { url: '/fml/team' } as RouterStateSnapshot)) as Observable<boolean | UrlTree>;

@@ -9,6 +9,7 @@ Mongoose n’initialise qu’une collection : `users`. Chaque document contient 
 ```text
 users
   fplId, firstName, lastName, fplTeamName
+  passwordHash (scrypt)
   team: { name, leagueFplId, leagueName, managerIds, captainId, budget, spent, managers[], pendingSnapshots[] }
   scoreHistory: [{ gw, points, total, managerIds, captainId, teamName, capturedAt }]
   totalScore, tokenVersion, refreshHash, refreshExpires
@@ -22,7 +23,8 @@ Toutes les routes sont sous `/api`.
 
 | Méthode | Route | Usage |
 | --- | --- | --- |
-| `POST` | `/auth/fpl/login` | `{fplId}`; récupère l’identité publique et ouvre une session |
+| `POST` | `/auth/register` | `{fplId, password}`; vérifie l’entrée FPL, stocke un hash scrypt et ouvre une session |
+| `POST` | `/auth/login` | `{fplId, password}`; ouvre une session avec les identifiants |
 | `POST` | `/auth/refresh` | Renouvelle la session via cookie HttpOnly |
 | `POST` | `/auth/logout` | Révoque la session |
 | `GET` | `/auth/me` | Document utilisateur courant |
@@ -33,7 +35,7 @@ Toutes les routes sont sous `/api`.
 | `POST` | `/team/sync` | Actualise les GW terminées et le total |
 | `GET` | `/health` | Vérifie la connexion MongoDB |
 
-L’API limite le login à cinq requêtes par minute et vérifie l’origine des opérations de session. Les ID FPL étant publics, le login ne prouve pas l’identité : un visiteur peut prendre le compte d’un autre ID. Ne pas exposer ce mode comme authentification sécurisée.
+L’API limite l’inscription et la connexion à cinq requêtes par minute et vérifie l’origine des opérations de session. Les mots de passe ont au moins 12 caractères à l’inscription et ne sont stockés que sous forme de hash scrypt. L’ID FPL reste public et sa propriété n’est pas vérifiée : un visiteur peut inscrire en premier un ID encore disponible. Ne pas présenter cette inscription comme une preuve d’identité FPL.
 
 ## Installation et lancement
 
@@ -42,7 +44,7 @@ Utiliser Node.js 22 et npm depuis ce dossier :
 ```powershell
 npm ci
 Copy-Item .env.example .env
-# Configurer MONGODB_URI, JWT_SECRET (32 caractères minimum) et APP_ORIGIN.
+# Configurer MONGODB_URI, JWT_SECRET (32 caractères minimum), APP_ORIGIN et CRON_SECRET.
 npm run build
 npm run start:dev
 ```

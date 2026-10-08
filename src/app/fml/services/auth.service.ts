@@ -17,8 +17,12 @@ export class Auth {
   private restored = false;
   private refreshing?: Observable<boolean>;
 
-  login(fplId: number): Observable<Session> {
-    return this.http.post<Session>(`${API}/auth/fpl/login`, { fplId }, { withCredentials: true })
+  register(fplId: number, password: string): Observable<Session> {
+    return this.http.post<Session>(`${API}/auth/register`, { fplId, password }, { withCredentials: true })
+      .pipe(tap(session => this.accept(session)));
+  }
+  login(fplId: number, password: string): Observable<Session> {
+    return this.http.post<Session>(`${API}/auth/login`, { fplId, password }, { withCredentials: true })
       .pipe(tap(session => this.accept(session)));
   }
   restore(): Observable<boolean> {

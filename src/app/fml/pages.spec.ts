@@ -30,16 +30,32 @@ describe('single-document FML workflow', () => {
   });
   afterEach(() => http.verify());
 
-  it('connects directly with an FPL ID', async () => {
+  it('creates an account with an FPL ID and matching password', async () => {
     const fixture = TestBed.createComponent(FplConnect);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     fixture.componentInstance.form.controls.fplId.setValue(123456);
-    fixture.componentInstance.login();
-    const request = http.expectOne('/api/auth/fpl/login');
-    expect(request.request.body).toEqual({ fplId: 123456 });
+    fixture.componentInstance.setMode('register');
+    fixture.componentInstance.form.controls.password.setValue('correct horse battery staple');
+    fixture.componentInstance.form.controls.confirmPassword.setValue('correct horse battery staple');
+    fixture.componentInstance.submit();
+    const request = http.expectOne('/api/auth/register');
+    expect(request.request.body).toEqual({
+      fplId: 123456, password: 'correct horse battery staple',
+    });
     request.flush(fplSession);
     expect(TestBed.inject(Auth).authenticated()).toBe(true);
     expect(navigate).toHaveBeenCalledWith('/fml');
+  });
+
+  it('does not register when the passwords do not match', () => {
+    const fixture = TestBed.createComponent(FplConnect);
+    const page = fixture.componentInstance;
+    page.form.controls.fplId.setValue(123456);
+    page.setMode('register');
+    page.form.controls.password.setValue('correct horse battery staple');
+    page.form.controls.confirmPassword.setValue('different password');
+    page.submit();
+    http.expectNone('/api/auth/register');
   });
 
   it('opens player actions, removes or replaces a manager, and saves the five-player team', () => {

@@ -11,7 +11,7 @@ export class ScoringService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async scheduledSync() {
-    if (process.env.SYNC_ENABLED === 'false') return;
+    if (process.env.VERCEL === '1' || process.env.SYNC_ENABLED === 'false') return;
     try { await this.syncAll(); }
     catch (error) { this.logger.error((error as Error).message); }
   }

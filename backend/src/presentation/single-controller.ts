@@ -4,13 +4,14 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { timingSafeEqual } from 'node:crypto';
 import { Request, Response } from 'express';
 import { Public, AuthService, userView } from '../application/auth';
 import { TeamService } from '../application/team';
 import { ScoringService } from '../application/scoring';
 import { Database, User } from '../infrastructure/database';
 import { Config } from '../infrastructure/config';
-import { FplLoginDto, ManagerLeagueQueryDto, TeamDto } from './single-dto';
+import { FplLoginDto, FplRegisterDto, ManagerLeagueQueryDto, TeamDto } from './single-dto';
 
 type AuthRequest = Request & { user: User };
 
@@ -33,11 +34,19 @@ export class AuthController {
     });
     res.setHeader('Cache-Control', 'no-store');
   }
-  @Public() @Post('fpl/login') @HttpCode(200)
+  @Public() @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async register(@Body() body: FplRegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    this.origin(req);
+    const result = await this.auth.register(body.fplId, body.password);
+    this.cookie(res, result.refreshToken);
+    return result.body;
+  }
+  @Public() @Post('login') @HttpCode(200)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   async login(@Body() body: FplLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     this.origin(req);
-    const result = await this.auth.login(body.fplId);
+    const result = await this.auth.login(body.fplId, body.password);
     this.cookie(res, result.refreshToken);
     return result.body;
   }
@@ -103,5 +112,22 @@ export class HealthController {
     try { await this.db.connection.db!.admin().ping(); }
     catch { throw new ServiceUnavailableException('Database unavailable'); }
     return { status: 'ok' };
+  }
+}
+
+@ApiTags('cron') @Controller('cron')
+export class CronController {
+  constructor(private readonly scoring: ScoringService, private readonly config: Config) {}
+
+  @Public() @Get('sync')
+  sync(@Req() req: Request) {
+    const authorization = req.headers.authorization || '';
+    const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    const expected = this.config.cronSecret;
+    if (!expected || token.length !== expected.length
+      || !timingSafeEqual(Buffer.from(token), Buffer.from(expected))) {
+      throw new ForbiddenException('Invalid cron authorization');
+    }
+    return this.scoring.syncAll();
   }
 }

@@ -21,20 +21,39 @@ export class FplConnect {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly busy = signal(false);
+  readonly mode = signal<'login' | 'register'>('login');
   readonly form = new FormGroup({
     fplId: new FormControl<number | null>(null, [
       Validators.required, Validators.min(1), Validators.max(Number.MAX_SAFE_INTEGER), Validators.pattern(/^\d+$/),
     ]),
+    password: new FormControl('', { nonNullable: true, validators: [
+      Validators.required, Validators.minLength(12), Validators.maxLength(128),
+    ] }),
+    confirmPassword: new FormControl('', { nonNullable: true }),
   });
 
-  login(): void {
+  setMode(mode: 'login' | 'register'): void {
+    this.mode.set(mode);
+    const confirmation = this.form.controls.confirmPassword;
+    if (mode === 'register') confirmation.setValidators(Validators.required);
+    else confirmation.clearValidators();
+    confirmation.updateValueAndValidity();
+    confirmation.reset();
+    this.form.updateValueAndValidity();
+  }
+
+  submit(): void {
     this.form.markAllAsTouched();
-    const fplId = this.form.controls.fplId.value;
-    if (this.form.invalid || fplId === null || this.busy()) return;
+    const { fplId, password, confirmPassword } = this.form.getRawValue();
+    if (this.form.invalid || fplId === null || this.busy()
+      || (this.mode() === 'register' && password !== confirmPassword)) return;
     this.busy.set(true);
-    this.auth.login(fplId).pipe(finalize(() => this.busy.set(false))).subscribe({
+    const authenticate = this.mode() === 'register'
+      ? this.auth.register(fplId, password)
+      : this.auth.login(fplId, password);
+    authenticate.pipe(finalize(() => this.busy.set(false))).subscribe({
       next: () => {
-        this.notices.message.set('Connected using your FPL ID.');
+        this.notices.message.set(this.mode() === 'register' ? 'Account created.' : 'Signed in.');
         const target = this.route.snapshot.queryParamMap.get('returnUrl');
         void this.router.navigateByUrl(target?.startsWith('/fml/') && !target.startsWith('/fml/connect') ? target : '/fml');
       },

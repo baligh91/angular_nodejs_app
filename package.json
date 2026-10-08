@@ -9,6 +9,9 @@
     "test": "ng test",
     "serve:ssr:angular-nodejs-app": "node dist/angular-nodejs-app/server/server.mjs"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "private": true,
   "packageManager": "npm@10.9.8",
   "dependencies": {

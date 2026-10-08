@@ -6,7 +6,7 @@
         <a mat-button routerLink="/fml" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Dashboard</a>
         <a mat-button routerLink="/fml/team" routerLinkActive="active">My team</a>
         <button mat-button (click)="logout()">Disconnect FPL</button>
-      } @else { <a mat-button routerLink="/fml/connect">Connect FPL ID</a> }
+      } @else { <a mat-button routerLink="/fml/connect">Sign in</a> }
     </nav>
   </header>
   @if (notices.message()) {

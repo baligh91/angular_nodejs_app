@@ -1,16 +1,32 @@
 import {
-  CanActivate, ConflictException, ExecutionContext, ForbiddenException,
+  CanActivate, ConflictException, ExecutionContext,
   Injectable, SetMetadata, UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { Types } from 'mongoose';
 import { Database, User } from '../infrastructure/database';
 import { Config } from '../infrastructure/config';
 import { FplClient } from '../infrastructure/fpl';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
+const derivePasswordKey = (password: string, salt: string) => new Promise<Buffer>((resolve, reject) => {
+  scryptCallback(password, salt, 64, { N: 1 << 14, r: 8, p: 1, maxmem: 64 * 1024 * 1024 },
+    (error, key) => error ? reject(error) : resolve(key));
+});
+const hashPassword = async (password: string) => {
+  const salt = randomBytes(16).toString('hex');
+  return `scrypt$${salt}$${(await derivePasswordKey(password, salt)).toString('hex')}`;
+};
+const DUMMY_PASSWORD_HASH = hashPassword('invalid-login-placeholder');
+const verifyPassword = async (password: string, encoded: string) => {
+  const [algorithm, salt, hash, extra] = encoded.split('$');
+  if (algorithm !== 'scrypt' || extra !== undefined
+    || !/^[a-f\d]{32}$/i.test(salt) || !/^[a-f\d]{128}$/i.test(hash)) return false;
+  const candidate = await derivePasswordKey(password, salt);
+  return timingSafeEqual(candidate, Buffer.from(hash, 'hex'));
+};
 export const Public = () => SetMetadata('public', true);
 
 export function userView(user: User) {
@@ -28,28 +44,44 @@ export class AuthService {
     private readonly jwt: JwtService, private readonly fpl: FplClient,
   ) {}
 
-  async login(fplId: number) {
+  async register(fplId: number, password: string) {
+    if (await this.db.users.exists({ fplId })) throw new ConflictException('FPL ID is already registered');
     const profile = await this.fpl.entry(fplId);
-    const token = randomBytes(48).toString('base64url');
-    const existing = await this.db.users.findOne({ fplId });
-    if (existing?.disabled) throw new ForbiddenException('Account disabled');
-    let user: User | null;
+    let user: User;
     try {
-      user = await this.db.users.findOneAndUpdate({ fplId, disabled: false }, {
-        $set: { firstName: profile.firstName, lastName: profile.lastName,
-          fplTeamName: profile.teamName, fplLeagues: profile.leagues, refreshHash: digest(token),
-          refreshExpires: new Date(Date.now() + 7 * 86400000) },
-        $setOnInsert: { scoreHistory: [], totalScore: 0 },
-        $inc: { tokenVersion: 1 },
-      }, { new: true, upsert: true, setDefaultsOnInsert: true });
+      user = await this.db.users.create({
+        fplId, firstName: profile.firstName, lastName: profile.lastName,
+        fplTeamName: profile.teamName, fplLeagues: profile.leagues,
+        passwordHash: await hashPassword(password), scoreHistory: [], totalScore: 0,
+      });
     } catch (error) {
       if ((error as { code?: number }).code !== 11000) throw error;
-      user = await this.db.users.findOne({ fplId });
-      if (user?.disabled) throw new ForbiddenException('Account disabled');
-      throw new ConflictException('FPL identity logged in concurrently; retry login');
+      throw new ConflictException('FPL ID is already registered');
     }
-    if (!user) throw new ForbiddenException('Account disabled');
-    return { body: { accessToken: this.access(user), user: userView(user) }, refreshToken: `${user._id}.${token}` };
+    return this.issueSession(user);
+  }
+
+  async login(fplId: number, password: string) {
+    const user = await this.db.users.findOne({ fplId }).select('+passwordHash');
+    const passwordHash = user?.passwordHash || await DUMMY_PASSWORD_HASH;
+    const validPassword = await verifyPassword(password, passwordHash);
+    if (!user || user.disabled || !validPassword) {
+      throw new UnauthorizedException('Invalid FPL ID or password');
+    }
+    return this.issueSession(user);
+  }
+
+  private async issueSession(user: User) {
+    const token = randomBytes(48).toString('base64url');
+    const authenticatedUser = await this.db.users.findOneAndUpdate({ _id: user._id, disabled: false }, {
+      $set: { refreshHash: digest(token), refreshExpires: new Date(Date.now() + 7 * 86400000) },
+      $inc: { tokenVersion: 1 },
+    }, { new: true });
+    if (!authenticatedUser) throw new UnauthorizedException('Invalid FPL ID or password');
+    return {
+      body: { accessToken: this.access(authenticatedUser), user: userView(authenticatedUser) },
+      refreshToken: `${authenticatedUser._id}.${token}`,
+    };
   }
 
   private access(user: User) {

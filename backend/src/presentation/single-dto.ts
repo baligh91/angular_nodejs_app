@@ -2,8 +2,17 @@ import { Transform } from 'class-transformer';
 import { ArrayUnique, IsArray, IsInt, IsString, Length, Max, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class FplLoginDto {
+class FplIdDto {
   @ApiProperty() @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) fplId!: number;
+}
+
+export class FplRegisterDto extends FplIdDto {
+  @ApiProperty({ minLength: 12, maxLength: 128 })
+  @IsString() @Length(12, 128) password!: string;
+}
+
+export class FplLoginDto extends FplIdDto {
+  @ApiProperty() @IsString() @Length(1, 128) password!: string;
 }
 
 export class ManagerLeagueQueryDto {

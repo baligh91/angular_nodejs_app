@@ -5,7 +5,8 @@ import { FplClient, FplLeague } from './fpl';
 
 export interface User {
   _id: Types.ObjectId; fplId: number; firstName: string; lastName: string;
-  fplTeamName: string; fplLeagues: FplLeague[]; disabled: boolean; tokenVersion: number;
+  fplTeamName: string; fplLeagues: FplLeague[]; passwordHash: string;
+  disabled: boolean; tokenVersion: number;
   refreshHash?: string; refreshExpires?: Date; team?: UserTeam;
   scoreHistory: UserScore[]; totalScore: number;
 }
@@ -34,9 +35,10 @@ export class Database implements OnModuleInit, OnModuleDestroy {
     }).asPromise();
       this.users = this.model<User>('users', {
         fplId: { ...number, min: 1 }, firstName: text, lastName: text,
-        fplTeamName: text, disabled: { type: Boolean, default: false },
+        fplTeamName: text, passwordHash: { ...text, select: false },
+        disabled: { type: Boolean, default: false },
         fplLeagues: { type: [{ _id: false, id: Number, name: String }], default: [] },
-        tokenVersion: Number, refreshHash: String, refreshExpires: Date,
+        tokenVersion: { type: Number, default: 0 }, refreshHash: String, refreshExpires: Date,
         team: {
           name: String, leagueFplId: Number, leagueName: String, format: { type: Number, enum: [5] }, firstScoringGw: Number,
           managerIds: [Number], captainId: Number, budget: Number, spent: Number,

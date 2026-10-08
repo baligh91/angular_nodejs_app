@@ -52,9 +52,17 @@ describe('single-document FML API', () => {
   });
   afterAll(async () => { await app?.close(); await mongo?.stop(); });
 
-  it('stores login, one format-5 team, and GW plus total scores in only users', async () => {
-    const login = await request(app.getHttpServer()).post('/api/auth/fpl/login')
-      .send({ fplId: 72021 }).expect(200);
+  it('stores password-backed accounts, one format-5 team, and scores in only users', async () => {
+    const password = 'correct horse battery staple';
+    const registration = await request(app.getHttpServer()).post('/api/auth/register')
+      .send({ fplId: 72021, password }).expect(201);
+    expect(registration.body.user).not.toHaveProperty('passwordHash');
+    const stored = await db.users.findOne({ fplId: 72021 }).select('+passwordHash').lean();
+    expect(stored?.passwordHash).not.toBe(password);
+    await request(app.getHttpServer()).post('/api/auth/login')
+      .send({ fplId: 72021, password: 'incorrect password' }).expect(401);
+    const login = await request(app.getHttpServer()).post('/api/auth/login')
+      .send({ fplId: 72021, password }).expect(200);
     token = login.body.accessToken;
     expect(login.body.user).toMatchObject({ fplId: 72021, firstName: 'FPL', lastName: 'Manager 72021' });
     expect(login.body.user.fplLeagues).toEqual([{ id: 999001, name: 'Public league' }]);
@@ -75,8 +83,10 @@ describe('single-document FML API', () => {
     expect(saved.body.firstScoringGw).toBe(2);
 
     const sharedManagers = [90000011, 90000012, 90000013, 90000014, 90000015];
-    const secondLogin = await request(app.getHttpServer()).post('/api/auth/fpl/login').send({ fplId: 72022 }).expect(200);
-    const thirdLogin = await request(app.getHttpServer()).post('/api/auth/fpl/login').send({ fplId: 72023 }).expect(200);
+    const secondLogin = await request(app.getHttpServer()).post('/api/auth/register')
+      .send({ fplId: 72022, password }).expect(201);
+    const thirdLogin = await request(app.getHttpServer()).post('/api/auth/register')
+      .send({ fplId: 72023, password }).expect(201);
     await request(app.getHttpServer()).put('/api/team').set('Authorization', `Bearer ${secondLogin.body.accessToken}`)
       .send({ name: 'FML Runner Up', leagueFplId: 999001, managerIds: sharedManagers, captainId: sharedManagers[0] })
       .expect(200);
@@ -135,8 +145,13 @@ describe('single-document FML API', () => {
     expect(collections).toEqual(['users']);
   });
 
-  it('validates ID-only login and five distinct managers, and no longer exposes legacy routes', async () => {
-    await request(app.getHttpServer()).post('/api/auth/fpl/login').send({ fplId: 0 }).expect(400);
+  it('validates password registration and login and no longer exposes legacy routes', async () => {
+    await request(app.getHttpServer()).post('/api/auth/register')
+      .send({ fplId: 0, password: 'correct horse battery staple' }).expect(400);
+    await request(app.getHttpServer()).post('/api/auth/register')
+      .send({ fplId: 72021, password: 'correct horse battery staple' }).expect(409);
+    await request(app.getHttpServer()).post('/api/auth/login').send({ fplId: 72021 }).expect(400);
+    await request(app.getHttpServer()).post('/api/auth/fpl/login').send({ fplId: 72021 }).expect(404);
     await request(app.getHttpServer()).post('/api/auth/fpl/challenge').send({ fplId: 72021 }).expect(404);
     await request(app.getHttpServer()).post('/api/auth/fpl/verify').send({}).expect(404);
     await request(app.getHttpServer()).get('/api/leagues').expect(404);

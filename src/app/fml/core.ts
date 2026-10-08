@@ -13,7 +13,8 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
   if (!(request.url === API || request.url.startsWith(`${API}/`))) return next(request);
   const auth = inject(Auth);
   const notices = inject(Notices);
-  const isAuth = request.url === `${API}/auth/fpl/login`
+  const isAuth = request.url === `${API}/auth/register`
+    || request.url === `${API}/auth/login`
     || request.url === `${API}/auth/refresh`
     || request.url === `${API}/auth/logout`;
   const authorized = () => auth.token() && !isAuth

@@ -5,15 +5,15 @@ Application FML simplifiée : un compte par ID FPL, une équipe de cinq managers
 ## Architecture
 
 - Frontend : Angular 21, écran de connexion, dashboard et éditeur d’équipe.
-- API : NestJS, login FPL, recherche de managers dans une ligue classique publique et calcul des scores.
+- API : NestJS, inscription/connexion par ID FPL et mot de passe, recherche de managers dans une ligue classique publique et calcul des scores.
 - MongoDB : une seule collection, `users`. L’identité, l’équipe, les snapshots de roster et les scores sont intégrés dans le document utilisateur.
 - Format unique : 5 managers, budget 25M, capitaine à points doubles.
 
 ## Connexion
 
-Sur `/fml/connect`, saisir l’ID FPL public. L’application récupère le prénom, le nom et le nom d’équipe FPL, puis ouvre une session.
+Sur `/fml/connect`, créer un compte avec l’ID FPL et un mot de passe d’au moins 12 caractères, ou se connecter avec ces identifiants. Le profil FPL public est récupéré lors de l’inscription. Le mot de passe est stocké sous forme de hash scrypt dans le document `users`; il n’est jamais renvoyé par l’API.
 
-**Risque important :** l’ID FPL est public, pas un secret. Toute personne qui le connaît peut se connecter à ce compte et modifier son équipe FML. Ce mode ne protège pas l’identité et ne doit pas être présenté comme une authentification sûre.
+**Limite d’identité :** l’ID FPL est public. Le mot de passe protège le compte après son inscription, mais l’application ne vérifie pas que la personne qui crée le compte possède réellement cet ID. Quelqu’un peut donc inscrire en premier un ID FPL non encore enregistré. Ne réutilisez pas le mot de passe d’un autre service.
 
 ## Équipe et scores
 
@@ -42,6 +42,21 @@ npm start
 
 Frontend : http://localhost:4200/fml · API : http://localhost:3000/api · Santé : `/api/health`.
 Le proxy Angular transmet `/api` à NestJS.
+
+## Déploiement Vercel
+
+Le dépôt est configuré pour publier l’application Angular et son API NestJS sur Vercel. La version Node est fixée à 22; les routes Angular retombent sur `index.csr.html`, et l’API est servie sous `/api`.
+
+Importer le dépôt GitHub dans Vercel en utilisant sa racine comme répertoire du projet, puis définir ces variables pour Production (et Preview si nécessaire) :
+
+- `MONGODB_URI` : URI MongoDB Atlas ou autre MongoDB accessible depuis Vercel.
+- `JWT_SECRET` : secret aléatoire d’au moins 32 caractères.
+- `CRON_SECRET` : secret aléatoire utilisé pour autoriser la synchronisation horaire.
+- `APP_ORIGIN` : URL HTTPS exacte du déploiement de production, sans slash final.
+
+Le cron Vercel appelle `/api/cron/sync` chaque jour à 00:00 UTC (compatible avec l’offre Hobby); le secret `CRON_SECRET` est envoyé dans son en-tête Bearer. La synchronisation manuelle reste disponible entre deux passages. Ne pas copier `.env` dans le dépôt : seuls les noms de variables et exemples non secrets sont versionnés.
+
+Le login par mot de passe n’inclut pas encore de preuve de propriété de l’ID FPL. Voir la limite décrite dans « Connexion » avant de rendre le site public.
 
 Pour une ancienne base FML, vérifier d’abord la migration :
 

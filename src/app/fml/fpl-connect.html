@@ -1,21 +1,52 @@
 <section class="connect-layout">
     <div class="hero">
         <p class="eyebrow">FANTASY MANAGER LEAGUE</p>
-        <h1>Connect with your FPL ID.</h1>
-        <p>Enter your Fantasy Premier League manager ID to continue.</p>
+        <h1>Your FPL team, your account.</h1>
+        <p>Sign in or create an account with your Fantasy Premier League manager ID.</p>
         <p>Your ID is the number in your FPL points-page URL: <code>/entry/123456/event/1</code>.</p>
-        <p class="notice" role="note">This sign-in uses the ID only. Anyone who knows an ID can access and change its
-            FML account.</p>
+        <p class="notice" role="note">An FPL ID is public. A password protects your FML account after registration,
+            but does not prove ownership of the FPL entry. Someone else could register an ID first.</p>
     </div>
     <div class="panel">
-        <h2>FPL manager ID</h2>
-        <form [formGroup]="form" (ngSubmit)="login()" class="form-stack">
+        <div class="auth-modes" aria-label="Account access">
+            <button mat-button type="button" [attr.aria-pressed]="mode() === 'login'"
+                (click)="setMode('login')">Sign in</button>
+            <button mat-button type="button" [attr.aria-pressed]="mode() === 'register'"
+                (click)="setMode('register')">Create account</button>
+        </div>
+        <h2>{{mode() === 'register' ? 'Create your account' : 'Sign in'}}</h2>
+        <form [formGroup]="form" (ngSubmit)="submit()" class="form-stack">
             <mat-form-field><mat-label>FPL manager ID</mat-label>
                 <input matInput type="number" min="1" step="1" formControlName="fplId" [readonly]="busy()"
-                    autocomplete="off">
+                    autocomplete="username">
                 <mat-error>Enter a positive integer FPL manager ID.</mat-error>
             </mat-form-field>
-            <button mat-flat-button type="submit" [disabled]="busy()">{{busy() ? 'Connecting...' : 'Connect'}}</button>
+            <mat-form-field><mat-label>Password</mat-label>
+                <input matInput type="password" formControlName="password" [readonly]="busy()"
+                    [attr.autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'">
+                @if (form.controls.password.hasError('required')) {
+                    <mat-error>Enter your password.</mat-error>
+                } @else if (form.controls.password.hasError('minlength')) {
+                    <mat-error>Use at least 12 characters.</mat-error>
+                } @else if (form.controls.password.hasError('maxlength')) {
+                    <mat-error>Use no more than 128 characters.</mat-error>
+                }
+            </mat-form-field>
+            @if (mode() === 'register') {
+                <mat-form-field><mat-label>Confirm password</mat-label>
+                    <input matInput type="password" formControlName="confirmPassword" [readonly]="busy()"
+                        autocomplete="new-password">
+                    @if (form.controls.confirmPassword.hasError('required')) {
+                        <mat-error>Confirm your password.</mat-error>
+                    } @else if (form.controls.confirmPassword.touched
+                        && form.controls.confirmPassword.value !== form.controls.password.value) {
+                        <mat-error>Passwords do not match.</mat-error>
+                    }
+                </mat-form-field>
+            }
+            <button mat-flat-button type="submit" [disabled]="busy()">
+                {{busy() ? 'Please wait...' : mode() === 'register' ? 'Create account' : 'Sign in'}}
+            </button>
         </form>
     </div>
 </section>
