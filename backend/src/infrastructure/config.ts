@@ -4,13 +4,12 @@ import { Injectable } from '@nestjs/common';
 export class Config {
   readonly production = process.env.NODE_ENV === 'production';
   readonly port = Number(process.env.PORT || 3000);
-  readonly mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fml?replicaSet=rs0';
+  readonly mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fml';
   readonly jwtSecret = process.env.JWT_SECRET || '';
   readonly origin = process.env.APP_ORIGIN || 'http://localhost:4200';
   readonly cookieSecure = process.env.COOKIE_SECURE === 'true' || this.production;
   readonly syncEnabled = process.env.SYNC_ENABLED !== 'false';
   readonly fplBase = process.env.FPL_BASE_URL || 'https://fantasy.premierleague.com/api/';
-  readonly adminFplIds = (process.env.ADMIN_FPL_IDS || '').split(',').map((id) => id.trim()).filter(Boolean).map(Number);
 
   constructor() {
     if (this.jwtSecret.length < 32) throw new Error('JWT_SECRET must contain at least 32 characters');
@@ -21,6 +20,5 @@ export class Config {
       if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid application/FPL URL');
       if (this.production && url.protocol !== 'https:') throw new Error('Production URLs require HTTPS');
     }
-    if (this.adminFplIds.some((id) => !Number.isSafeInteger(id) || id < 1)) throw new Error('Invalid ADMIN_FPL_IDS');
   }
 }

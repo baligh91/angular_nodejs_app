@@ -1,0 +1,21 @@
+<section class="connect-layout">
+    <div class="hero">
+        <p class="eyebrow">FANTASY MANAGER LEAGUE</p>
+        <h1>Connect with your FPL ID.</h1>
+        <p>Enter your Fantasy Premier League manager ID to continue.</p>
+        <p>Your ID is the number in your FPL points-page URL: <code>/entry/123456/event/1</code>.</p>
+        <p class="notice" role="note">This sign-in uses the ID only. Anyone who knows an ID can access and change its
+            FML account.</p>
+    </div>
+    <div class="panel">
+        <h2>FPL manager ID</h2>
+        <form [formGroup]="form" (ngSubmit)="login()" class="form-stack">
+            <mat-form-field><mat-label>FPL manager ID</mat-label>
+                <input matInput type="number" min="1" step="1" formControlName="fplId" [readonly]="busy()"
+                    autocomplete="off">
+                <mat-error>Enter a positive integer FPL manager ID.</mat-error>
+            </mat-form-field>
+            <button mat-flat-button type="submit" [disabled]="busy()">{{busy() ? 'Connecting...' : 'Connect'}}</button>
+        </form>
+    </div>
+</section>

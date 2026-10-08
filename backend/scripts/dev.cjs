@@ -14,7 +14,11 @@ host.afterProgramCreate = (program) => {
     diagnostic.category === ts.DiagnosticCategory.Error)) return;
   const start = () => {
     restarting = false;
-    if (!closing) server = spawn(process.execPath, ['dist/main.js'], { stdio: 'inherit' });
+    const nodeOptions = new Set((process.env.NODE_OPTIONS || '').split(/\s+/).filter(Boolean));
+    nodeOptions.add('--use-system-ca');
+    if (!closing) server = spawn(process.execPath, ['dist/main.js'], {
+      stdio: 'inherit', env: { ...process.env, NODE_OPTIONS: [...nodeOptions].join(' ') },
+    });
   };
   if (restarting) return;
   if (server && server.exitCode === null && server.signalCode === null) {

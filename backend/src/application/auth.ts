@@ -4,20 +4,20 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { Types } from 'mongoose';
 import { Database, User } from '../infrastructure/database';
 import { Config } from '../infrastructure/config';
-import { FplClient, FplProfile } from '../infrastructure/fpl';
+import { FplClient } from '../infrastructure/fpl';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 export const Public = () => SetMetadata('public', true);
-export const Admin = () => SetMetadata('admin', true);
 
 export function userView(user: User) {
   return {
-    id: user._id.toString(), fplId: user.fplId, pseudo: user.pseudo, role: user.role,
-    avatar: user.avatar, favoriteTeam: user.favoriteTeam, fplProfile: user.fplProfile,
+    id: user._id.toString(), fplId: user.fplId, firstName: user.firstName,
+    lastName: user.lastName, fplTeamName: user.fplTeamName, fplLeagues: user.fplLeagues, team: user.team,
+    scoreHistory: user.scoreHistory, totalScore: user.totalScore,
   };
 }
 
@@ -28,67 +28,28 @@ export class AuthService {
     private readonly jwt: JwtService, private readonly fpl: FplClient,
   ) {}
 
-  private profileData(profile: FplProfile) {
-    return {
-      fplProfile: profile, pseudo: `${profile.firstName} ${profile.lastName}`.trim() || `FPL ${profile.id}`,
-      favoriteTeam: profile.favoriteTeam?.name ?? null,
-    };
-  }
-
-  async challenge(fplId: number) {
+  async login(fplId: number) {
     const profile = await this.fpl.entry(fplId);
-    const challengeId = randomBytes(32).toString('base64url');
-    const code = `FML-${randomBytes(8).toString('hex').toUpperCase()}`;
-    const expiresAt = new Date(Date.now() + 15 * 60000);
-    await this.db.challenges.create({ fplId, challengeHash: digest(challengeId), codeHash: digest(code), expiresAt });
-    return { challengeId, code, expiresAt, profile };
-  }
-
-  async verifyChallenge(challengeId: string) {
-    const challenge = await this.db.challenges.findOneAndUpdate({
-      challengeHash: digest(challengeId), consumedAt: { $exists: false },
-      expiresAt: { $gt: new Date() }, attempts: { $lt: 10 },
-    }, { $inc: { attempts: 1 } }, { new: true });
-    if (!challenge) throw new UnauthorizedException('Invalid, expired or exhausted FPL challenge');
-    const profile = await this.fpl.entry(challenge.fplId);
-    const expected = Buffer.from(challenge.codeHash, 'hex');
-    const code = profile.teamName.trim();
-    const matched = /^FML-[A-F0-9]{16}$/.test(code)
-      && timingSafeEqual(Buffer.from(digest(code), 'hex'), expected);
-    if (!matched) throw new UnauthorizedException('Set your FPL team name to the exact verification code');
     const token = randomBytes(48).toString('base64url');
-    const role = this.config.adminFplIds.includes(challenge.fplId) ? 'admin' : 'user';
-    return this.db.transaction(async (session) => {
-      const consumed = await this.db.challenges.findOneAndUpdate({
-        _id: challenge._id, consumedAt: { $exists: false }, expiresAt: { $gt: new Date() },
-        attempts: { $lte: 10 },
-      }, { $set: { consumedAt: new Date() } }, { new: true, session });
-      if (!consumed) throw new UnauthorizedException('FPL challenge already consumed or expired');
-      let user = await this.db.users.findOne({ fplId: challenge.fplId }).session(session);
-      if (user?.disabled) throw new ForbiddenException('Account disabled');
-      if (!user) user = (await this.db.users.create([{
-        fplId: challenge.fplId, ...this.profileData(profile), role,
-      }], { session }))[0];
-      user = (await this.db.users.findOneAndUpdate({ _id: user._id, disabled: false }, {
-        $set: { ...this.profileData(profile), role, refreshHash: digest(token),
+    const existing = await this.db.users.findOne({ fplId });
+    if (existing?.disabled) throw new ForbiddenException('Account disabled');
+    let user: User | null;
+    try {
+      user = await this.db.users.findOneAndUpdate({ fplId, disabled: false }, {
+        $set: { firstName: profile.firstName, lastName: profile.lastName,
+          fplTeamName: profile.teamName, fplLeagues: profile.leagues, refreshHash: digest(token),
           refreshExpires: new Date(Date.now() + 7 * 86400000) },
+        $setOnInsert: { scoreHistory: [], totalScore: 0 },
         $inc: { tokenVersion: 1 },
-      }, { new: true, session }))!;
-      if (!user) throw new ForbiddenException('Account disabled');
-      return { body: { accessToken: this.access(user), user: userView(user) }, refreshToken: `${user._id}.${token}` };
-    }).catch((error) => {
-      if (error.code === 11000) throw new ConflictException('FPL identity connected concurrently; retry verification');
-      throw error;
-    });
-  }
-
-  async syncProfile(user: User) {
-    if (!user.fplId) throw new UnauthorizedException('FPL connection required');
-    const profile = await this.fpl.entry(user.fplId);
-    const updated = await this.db.users.findOneAndUpdate({ _id: user._id, fplId: user.fplId, disabled: false },
-      { $set: this.profileData(profile) }, { new: true });
-    if (!updated) throw new UnauthorizedException();
-    return userView(updated);
+      }, { new: true, upsert: true, setDefaultsOnInsert: true });
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+      user = await this.db.users.findOne({ fplId });
+      if (user?.disabled) throw new ForbiddenException('Account disabled');
+      throw new ConflictException('FPL identity logged in concurrently; retry login');
+    }
+    if (!user) throw new ForbiddenException('Account disabled');
+    return { body: { accessToken: this.access(user), user: userView(user) }, refreshToken: `${user._id}.${token}` };
   }
 
   private access(user: User) {
@@ -102,8 +63,7 @@ export class AuthService {
     if (!Types.ObjectId.isValid(id || '') || !token || extra) throw new UnauthorizedException('Invalid refresh token');
     const rotated = randomBytes(48).toString('base64url');
     const user = await this.db.users.findOneAndUpdate({
-      _id: id, fplId: { $type: 'number', $gt: 0 }, 'fplProfile.id': { $exists: true },
-      $expr: { $eq: ['$fplId', '$fplProfile.id'] }, refreshHash: digest(token),
+      _id: id, fplId: { $type: 'number', $gt: 0 }, refreshHash: digest(token),
       refreshExpires: { $gt: new Date() }, disabled: false,
     }, { $set: { refreshHash: digest(rotated), refreshExpires: new Date(Date.now() + 7 * 86400000) } },
     { new: true });
@@ -144,14 +104,9 @@ export class AuthGuard implements CanActivate {
       if (!Types.ObjectId.isValid(payload.sub)) throw new Error();
       const user = await this.db.users.findOne({ _id: payload.sub, disabled: false });
       if (!user || !Number.isSafeInteger(user.fplId) || !user.fplId || user.fplId < 1
-        || user.fplProfile?.id !== user.fplId
         || user.tokenVersion !== payload.ver) throw new Error();
       request.user = user;
     } catch { throw new UnauthorizedException(); }
-    if (this.reflector.getAllAndOverride('admin', [context.getHandler(), context.getClass()])
-      && (request.user.role !== 'admin' || !this.config.adminFplIds.includes(request.user.fplId))) {
-      throw new ForbiddenException('Administrator role required');
-    }
     return true;
   }
 }

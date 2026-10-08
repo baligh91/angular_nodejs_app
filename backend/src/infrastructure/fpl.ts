@@ -5,17 +5,17 @@ export interface FplEvent {
   id: number; deadline_time: string; finished: boolean; is_current: boolean; data_checked: boolean;
 }
 export interface FplStanding {
-  entry: number; player_name: string; rank: number; event_total: number;
+  entry: number; player_name: string; rank: number; total: number; event_total: number;
 }
 export interface FplHistory {
   event: number; points: number; overall_rank: number;
 }
+export interface FplLeague {
+  id: number; name: string;
+}
 export interface FplProfile {
   id: number; firstName: string; lastName: string; teamName: string;
-  overallPoints: number | null; overallRank: number | null;
-  gameweekPoints: number | null; gameweekRank: number | null;
-  favoriteTeam: { id: number; name: string } | null;
-  leagues: { id: number; name: string; rank: number | null }[];
+  leagues: FplLeague[];
 }
 
 @Injectable()
@@ -48,36 +48,17 @@ export class FplClient {
 
   async entry(id: number): Promise<FplProfile> {
     const data = await this.get<Record<string, any>>(`entry/${id}/`, true);
-    const rank = (value: unknown) => value === null || (Number.isSafeInteger(value) && Number(value) > 0);
     if (data.id !== id || typeof data.player_first_name !== 'string' || typeof data.player_last_name !== 'string'
-      || typeof data.name !== 'string' || data.name.length > 100
-      || !(data.summary_overall_points === null || Number.isFinite(data.summary_overall_points))
-      || !(data.summary_event_points === null || Number.isFinite(data.summary_event_points))
-      || !rank(data.summary_overall_rank) || !rank(data.summary_event_rank)
-      || !Array.isArray(data.leagues?.classic)) throw new ServiceUnavailableException('Invalid FPL entry');
-    const leagues = data.leagues.classic.map((league: Record<string, unknown>) => {
-      if (!Number.isSafeInteger(league.id) || Number(league.id) < 1 || typeof league.name !== 'string'
-        || (league.entry_rank != null && !rank(league.entry_rank))) throw new ServiceUnavailableException('Invalid FPL league');
-      return { id: Number(league.id), name: league.name,
-        rank: league.entry_rank == null ? null : Number(league.entry_rank) };
-    });
-    let favoriteTeam: FplProfile['favoriteTeam'] = null;
-    if (data.favourite_team != null) {
-      if (!Number.isSafeInteger(data.favourite_team) || data.favourite_team < 1) {
-        throw new ServiceUnavailableException('Invalid FPL favorite team');
-      }
-      const bootstrap = await this.get<{ teams: { id: number; name: string }[] }>('bootstrap-static/');
-      if (!Array.isArray(bootstrap.teams)) throw new ServiceUnavailableException('Invalid FPL teams');
-      const team = bootstrap.teams.find((team) => team.id === data.favourite_team);
-      if (!team || typeof team.name !== 'string') throw new ServiceUnavailableException('Invalid FPL favorite team');
-      favoriteTeam = { id: team.id, name: team.name };
+      || typeof data.name !== 'string' || data.name.length > 100 || !Array.isArray(data.leagues?.classic)) {
+      throw new ServiceUnavailableException('Invalid FPL entry');
     }
-    return {
-      id, firstName: data.player_first_name, lastName: data.player_last_name, teamName: data.name,
-      overallPoints: data.summary_overall_points, overallRank: data.summary_overall_rank,
-      gameweekPoints: data.summary_event_points, gameweekRank: data.summary_event_rank,
-      favoriteTeam, leagues,
-    };
+    const leagues = data.leagues.classic.map((league: Record<string, unknown>) => {
+      if (!Number.isSafeInteger(league.id) || Number(league.id) < 1 || typeof league.name !== 'string') {
+        throw new ServiceUnavailableException('Invalid FPL classic league');
+      }
+      return { id: Number(league.id), name: league.name };
+    });
+    return { id, firstName: data.player_first_name, lastName: data.player_last_name, teamName: data.name, leagues };
   }
 
   async bootstrap(): Promise<FplEvent[]> {
@@ -103,7 +84,7 @@ export class FplClient {
       name = data.league.name;
       for (const manager of data.standings.results) {
         if (!Number.isInteger(manager.entry) || manager.entry < 1 || !Number.isInteger(manager.rank)
-          || manager.rank < 1 || !Number.isFinite(manager.event_total)
+          || manager.rank < 1 || !Number.isFinite(manager.total) || !Number.isFinite(manager.event_total)
           || typeof manager.player_name !== 'string') throw new ServiceUnavailableException('Invalid FPL manager');
         managers.push(manager);
       }

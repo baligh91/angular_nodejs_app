@@ -1,73 +1,71 @@
 export interface User {
   id: string;
   fplId: number;
-  pseudo: string;
-  role: 'user' | 'admin';
-  avatar?: string | null;
-  favoriteTeam?: string | null;
-  disabled?: boolean;
-  fplProfile: FplProfile;
-}
-export interface FplLeague { id: number; name: string; rank: number | null }
-export interface FplProfile {
-  id: number;
   firstName: string;
   lastName: string;
-  teamName: string;
-  overallPoints: number | null;
-  overallRank: number | null;
-  gameweekPoints: number | null;
-  gameweekRank: number | null;
-  favoriteTeam: { id: number; name: string } | null;
-  leagues: FplLeague[];
-}
-export interface FplChallenge {
-  challengeId: string;
-  code: string;
-  expiresAt: string;
-  profile: FplProfile;
+  fplTeamName: string;
+  fplLeagues: FplLeague[];
+  team?: Team;
+  scoreHistory: TeamScore[];
+  totalScore: number;
+  disabled?: boolean;
 }
 export interface Session { accessToken: string; user: User }
-export interface League { id: string; fplId: number; name: string; active?: boolean }
+export interface FplLeague { id: number; name: string }
 export interface Manager {
-  id: string;
+  id: number;
   fplId: number;
   name: string;
   rank: number;
+  totalPoints: number;
+  lastGwPoints: number;
   gwPoints: number;
   form: number;
   price: number;
   priceHistory?: { gw: number; price: number; delta: number }[];
 }
-export type Format = 5 | 7 | 11;
+export type Format = 5;
 export interface TeamInput {
   name: string;
-  leagueId: string;
-  format: Format;
-  managerIds: string[];
-  captainId: string;
+  leagueFplId: number;
+  managerIds: number[];
+  captainId: number;
 }
-export interface Team extends TeamInput {
-  id: string;
-  budget: number;
-  spent: number;
-  points: number;
-  rank: number;
-  members: Manager[];
-}
-export interface Gameweek { id: number; deadline: string; finished: boolean; current: boolean }
-export interface Ranking { rank: number; teamId: string; teamName: string; pseudo: string; points: number }
-export interface TeamHistory {
+export interface TeamScore {
   gw: number;
   points: number;
-  overallPoints: number;
-  rank: number;
-  teamValue: number;
+  total: number;
+  managerIds: number[];
+  captainId: number;
+  teamName: string;
+  capturedAt: string;
 }
-export const BUDGETS: Record<Format, number> = { 5: 250, 7: 300, 11: 500 };
+export interface Team {
+  id: number;
+  name: string;
+  leagueName: string;
+  format: 5;
+  leagueFplId: number | null;
+  managerIds: number[];
+  captainId: number | null;
+  budget: number;
+  spent: number;
+  members: Manager[];
+  scores: TeamScore[];
+  totalScore: number;
+  editsLocked: boolean;
+  firstScoringGw: number | null;
+  currentDeadline: string | null;
+}
+export interface ManagerLeague { leagueFplId: number; leagueName: string; managers: Manager[] }
+export interface TeamStanding {
+  rank: number;
+  ownerFplId: number;
+  ownerName: string;
+  teamName: string;
+  points: number;
+}
+export const BUDGETS: Record<5, number> = { 5: 250 };
 export function selectionCost(managers: readonly Manager[]): number {
   return managers.reduce((total, manager) => total + manager.price, 0);
-}
-export function editsLocked(gameweeks: readonly Gameweek[], now = Date.now()): boolean {
-  return gameweeks.some(gw => !gw.finished && Date.parse(gw.deadline) <= now);
 }

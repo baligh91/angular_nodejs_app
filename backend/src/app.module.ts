@@ -5,12 +5,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { InfrastructureModule } from './infrastructure/database';
 import { AuthGuard, AuthService } from './application/auth';
-import { TeamService } from './application/teams';
-import { SyncService } from './application/sync';
+import { TeamService } from './application/team';
+import { ScoringService } from './application/scoring';
 import {
-  AdminController, AuthController, GameweekController, HealthController,
-  LeagueController, ManagerController, RankingController, TeamController,
-} from './presentation/controllers';
+  AuthController, HealthController, TeamController,
+} from './presentation/single-controller';
 
 @Module({
   imports: [InfrastructureModule, JwtModule.register({})],
@@ -22,9 +21,9 @@ class AuthModule {}
 
 @Module({
   imports: [InfrastructureModule],
-  controllers: [LeagueController, ManagerController, TeamController, RankingController, GameweekController, AdminController],
-  providers: [TeamService, SyncService],
-  exports: [TeamService, SyncService],
+  controllers: [TeamController],
+  providers: [TeamService, ScoringService],
+  exports: [TeamService, ScoringService],
 })
 class FantasyModule {}
 

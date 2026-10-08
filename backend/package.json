@@ -8,7 +8,7 @@
     "start:dev": "node scripts/dev.cjs",
     "test": "jest --runInBand",
     "test:integration": "jest --runInBand --testMatch \"**/*.integration.spec.ts\"",
-    "seed": "npm run build && node dist/seed.js"
+    "migrate:single-collection": "node scripts/migrate-single-collection.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",

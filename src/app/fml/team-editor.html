@@ -1,0 +1,170 @@
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">FIVE-MANAGER SQUAD</p>
+        <h1>{{team()?.leagueFplId ? 'Edit your team' : 'Build your team'}}</h1>
+        <p>Five managers · 25M budget · Pick a public FPL classic league.</p>
+    </div>
+</div>
+@if (loading()) { <p role="status">Loading your team and leagues…</p> }
+<section class="panel team-editor-panel">
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-stack">
+        <div class="team-settings">
+            <mat-form-field><mat-label>Team name</mat-label><input matInput formControlName="name" maxlength="60"
+                    [readonly]="editsLocked()"><mat-error>Enter a team name between 2 and 60
+                    characters.</mat-error></mat-form-field>
+            @if (leaguesLoading()) { <p role="status">Loading your FPL leagues…</p> }
+            @if (leagues().length) {
+            <section class="league-picker" aria-label="Your FPL classic leagues">
+                @if (selectedLeague(); as league) {
+                @if (editingExistingTeam()) {
+                <div class="league-current-selection"><span class="league-hashtag selected"><span
+                            class="hash">#</span><span>{{league.name}}</span></span></div>
+                } @else if (!leaguePickerOpen()) {
+                <div class="league-current-selection"><span class="league-hashtag selected"><span
+                            class="hash">#</span><span>{{league.name}}</span></span><button mat-button type="button"
+                        (click)="leaguePickerOpen.set(true)">Change league</button></div>
+                } @else {
+                <h2>Choose another league</h2>
+                <div class="league-hashtags">
+                    @for (candidate of leagues(); track candidate.id) {
+                    <button type="button" class="league-hashtag" [class.selected]="selectedLeagueId() === candidate.id"
+                        [attr.aria-pressed]="selectedLeagueId() === candidate.id" [disabled]="editsLocked()"
+                        (click)="changeLeague(candidate.id)">
+                        <span class="hash">#</span><span>{{candidate.name}}</span>
+                    </button>
+                    }
+                </div>
+                }
+                } @else {
+                <h2>Choose your league</h2>
+                <div class="league-hashtags">
+                    @for (league of leagues(); track league.id) {
+                    <button type="button" class="league-hashtag" [disabled]="editsLocked()"
+                        (click)="changeLeague(league.id)">
+                        <span class="hash">#</span><span>{{league.name}}</span>
+                    </button>
+                    }
+                </div>
+                }
+            </section>
+            } @else if (!leaguesLoading()) {
+            <p>No public classic leagues found on this FPL account. Enter a public league ID to continue.</p>
+            <div class="filter-bar">
+                <mat-form-field><mat-label>Public FPL classic league ID</mat-label><input matInput type="number" min="1"
+                        step="1" formControlName="leagueFplId" [readonly]="editsLocked()"><mat-error>Enter a positive
+                        FPL league ID.</mat-error></mat-form-field>
+                <button mat-stroked-button type="button" (click)="loadManagers()"
+                    [disabled]="managersLoading() || editsLocked()">{{managersLoading() ? 'Loading…' : 'Load
+                    league'}}</button>
+            </div>
+            }
+        </div>
+        @if (selectedLeague(); as league) {
+        @if (editsLocked()) { <p class="notice" role="status">Team edits are locked after the gameweek deadline and will
+            reopen when the gameweek finishes.</p> }
+        @if (team()?.firstScoringGw; as firstGw) { <p class="muted">Team points start from GW {{firstGw}}.</p> }
+        @if (managersLoading()) { <p role="status">Loading managers from {{league.name}}…</p> }
+        <div class="team-builder-layout"
+            [class.manager-selection-open]="activeManager() !== null || activeEmptySlot() !== null">
+            <section class="team-pitch-panel" aria-labelledby="formation-title">
+                <div class="team-panel-heading">
+                    <div>
+                        <p class="eyebrow">{{league.name}}</p>
+                        <h2 id="formation-title">Your formation</h2>
+                    </div>
+                </div>
+                <div class="football-pitch" role="group" aria-label="Fantasy team formation on a football pitch">
+                    <div class="pitch-markings" aria-hidden="true"><span class="pitch-halfway"></span><span
+                            class="pitch-centre"></span><span class="pitch-box pitch-box-top"></span><span
+                            class="pitch-box pitch-box-bottom"></span></div>
+                    @for (manager of pitchSlots(); track $index; let position = $index) {
+                    @if (manager; as player) {
+                    <button type="button" class="pitch-player" [class.pitch-forward]="position === 0"
+                        [class.pitch-midfield-left]="position === 1" [class.pitch-midfield-right]="position === 2"
+                        [class.pitch-defence-left]="position === 3" [class.pitch-defence-right]="position === 4"
+                        [class.active]="activeManagerId() === player.fplId"
+                        [attr.aria-pressed]="activeManagerId() === player.fplId" [disabled]="editsLocked()"
+                        (click)="selectManager(player.fplId)">
+                        <span class="shirt-mark">{{player.fplId === captainId() ? 'C' : 'F'}}</span>
+                        <span class="field-name"><strong>{{player.name}}</strong><small>Rank #{{player.rank}} ·
+                                {{player.price / 10 | number:'1.1-1'}}M</small></span>
+                    </button>
+                    } @else {
+                    <button type="button" class="pitch-player empty-slot" [class.pitch-forward]="position === 0"
+                        [class.pitch-midfield-left]="position === 1" [class.pitch-midfield-right]="position === 2"
+                        [class.pitch-defence-left]="position === 3" [class.pitch-defence-right]="position === 4"
+                        [class.active]="activeEmptySlot() === position"
+                        [attr.aria-pressed]="activeEmptySlot() === position"
+                        [attr.aria-label]="'Choose a manager for place ' + (position + 1)" [disabled]="editsLocked()"
+                        (click)="selectEmptySlot(position)"><span class="shirt-mark">{{position + 1}}</span><span>Open
+                            place</span></button>
+                    }
+                    }
+                </div>
+                <div class="budget-summary">
+                    <div><span>Squad budget</span><strong>25.0M</strong></div>
+                    <div><span>Remaining</span><strong>{{(budget - spent()) / 10 | number:'1.1-1'}}M</strong></div>
+                </div>
+                <div class="captain-picker"><mat-form-field><mat-label>Captain (double points)</mat-label><mat-select
+                            [value]="captainId()" [disabled]="editsLocked()"
+                            (selectionChange)="captainId.set($event.value)">@for (manager of selected(); track
+                            manager.fplId) { <mat-option [value]="manager.fplId">{{manager.name}}</mat-option>
+                            }</mat-select></mat-form-field></div>
+                @if (validation()) { <p role="status">{{validation()}}</p> }
+                <button mat-flat-button type="submit"
+                    [disabled]="busy() || loading() || managersLoading() || editsLocked() || !!validation()">{{busy() ?
+                    'Saving…' : 'Save team'}}</button>
+            </section>
+            @if (activeManager() || activeEmptySlot() !== null) {
+            <section class="manager-browser" aria-labelledby="manager-browser-title">
+                <div class="manager-actions-heading">
+                    <div>
+                        <p class="eyebrow">{{activeManager() ? 'REPLACE MANAGER' : 'FILL EMPTY PLACE'}}</p>
+                        <h2 id="manager-browser-title">{{activeManager()?.name ?? 'Choose a manager'}}</h2>
+                    </div>
+                    <button mat-button type="button" (click)="activeManagerId.set(null); activeEmptySlot.set(null)"
+                        aria-label="Close manager table">Close</button>
+                </div>
+                @if (activeManager(); as manager) { <button mat-stroked-button type="button" class="remove-manager"
+                    [disabled]="editsLocked()" (click)="removeManager()">Remove {{manager.name}}</button> }
+                <h3>{{activeManager() ? 'Replacement options' : 'Available managers'}} <span
+                        class="muted">{{suggestions().length}}</span></h3>
+                @if (suggestions().length) {
+                <div class="table-scroll replacement-table">
+                    <table>
+                        <caption>Managers from {{league.name}}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Manager</th>
+                                <th scope="col">Price</th>
+                                <th scope="col">Rank</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Last GW</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>@for (suggestion of suggestions(); track suggestion.fplId) {
+                            <tr>
+                                <th scope="row">{{suggestion.name}}</th>
+                                <td>{{suggestion.price / 10 | number:'1.1-1'}}M</td>
+                                <td>#{{suggestion.rank}}</td>
+                                <td>{{suggestion.totalPoints | number}}</td>
+                                <td>{{suggestion.lastGwPoints | number}}</td>
+                                <td><button mat-stroked-button type="button"
+                                        (click)="activeManager() ? replaceManager(suggestion.fplId) : addManager(suggestion.fplId)"
+                                        [disabled]="editsLocked() || (activeManager() ? !canReplace(suggestion.fplId) : !canAdd(suggestion.fplId))"
+                                        [attr.aria-label]="(activeManager() ? 'Replace ' + activeManager()?.name + ' with ' : 'Add ') + suggestion.name">{{activeManager()
+                                        ? (canReplace(suggestion.fplId) ? 'Replace' : 'Over budget') :
+                                        (canAdd(suggestion.fplId) ? 'Add' : 'Over budget')}}</button></td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                } @else { <p>No managers available in this league.</p> }
+            </section>
+            }
+        </div>
+        }
+    </form>
+</section>

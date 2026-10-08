@@ -1,0 +1,86 @@
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">FANTASY MANAGER LEAGUE</p>
+        <h1>Team statistics</h1>
+    </div>
+    @if (team()?.leagueFplId) { <button mat-flat-button (click)="sync()" [disabled]="loading()">{{loading() ?
+        'Updating…' : 'Refresh scores'}}</button> }
+</div>
+@if (loading() && !team()) { <p role="status">Loading your team…</p> }
+@if (failed()) { <p role="alert">Could not load data from FPL. <button mat-button (click)="load()">Retry</button></p> }
+@if (team(); as squad) {
+@if (squad.leagueFplId) {
+<section class="panel stats-grid">
+    <div><span>Fantasy team</span><strong>{{squad.name}}</strong></div>
+    <div><span>FPL league</span><strong>{{squad.leagueName}}</strong></div>
+    <div><span>Total season points</span><strong>{{squad.totalScore | number}}</strong></div>
+    <div><span>Scoring starts</span><strong>GW {{squad.firstScoringGw ?? '—'}}</strong></div>
+    <div><span>Budget remaining</span><strong>{{(squad.budget - squad.spent) / 10 | number:'1.1-1'}}M</strong></div>
+</section>
+<section class="panel">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">LEAGUE TABLE</p>
+            <h2>Fantasy team standings</h2>
+        </div>
+    </div>
+    @if (standingsFailed()) { <p role="alert">Could not load the league table.</p> }
+    @if (!standingsFailed()) {
+    <div class="table-scroll">
+        <table>
+            <caption>Teams in {{squad.leagueName}}</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Pos</th>
+                    <th scope="col">Fantasy team</th>
+                    <th scope="col">Manager</th>
+                    <th scope="col">Points</th>
+                </tr>
+            </thead>
+            <tbody>@for (row of standings(); track row.ownerFplId) {
+                <tr [class.current-team]="row.ownerFplId === squad.id">
+                    <th scope="row">{{row.rank}}</th>
+                    <td>{{row.teamName}}</td>
+                    <td>{{row.ownerName}}</td>
+                    <td class="points">{{row.points | number}}</td>
+                </tr>
+                } @empty { <tr>
+                    <td colspan="4">No fantasy teams in this league yet.</td>
+                </tr> }
+            </tbody>
+        </table>
+    </div>
+    }
+</section>
+<section class="panel">
+    <h2>Gameweek scores</h2>
+    <div class="table-scroll">
+        <table>
+            <caption>Fantasy team score by gameweek</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Gameweek</th>
+                    <th scope="col">GW points</th>
+                    <th scope="col">Season total</th>
+                </tr>
+            </thead>
+            <tbody>@for (score of squad.scores; track score.gw) {
+                <tr>
+                    <th scope="row">GW {{score.gw}}</th>
+                    <td>{{score.points | number}}</td>
+                    <td>{{score.total | number}}</td>
+                </tr>
+                } @empty { <tr>
+                    <td colspan="3">No completed gameweek scores yet.</td>
+                </tr> }
+            </tbody>
+        </table>
+    </div>
+</section>
+} @else {
+<section class="panel empty">
+    <h2>No fantasy team yet</h2>
+    <p>Create your five-manager team from the My team page.</p>
+</section>
+}
+}

@@ -4,9 +4,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
 import { Observable, firstValueFrom } from 'rxjs';
-import { Auth, Notices, adminGuard, apiInterceptor, authGuard } from './core';
+import { Auth, Notices, apiInterceptor, authGuard } from './core';
 
-import { fplSession as session, fplChallenge } from './test-fixtures';
+import { fplSession as session } from './test-fixtures';
 describe('FML authentication', () => {
   let http: HttpTestingController;
   let auth: Auth;
@@ -88,44 +88,22 @@ describe('FML authentication', () => {
     expect(auth.authenticated()).toBe(false);
     expect(auth.token()).toBeNull();
   });
-  it('does not grant a session for a public FPL profile before ownership verification', async () => {
-    const proof = firstValueFrom(auth.challenge(123456));
-    const request = http.expectOne('/api/auth/fpl/challenge');
+  it('creates a session directly from an FPL ID', async () => {
+    const login = firstValueFrom(auth.login(123456));
+    const request = http.expectOne('/api/auth/fpl/login');
     expect(request.request.body).toEqual({ fplId: 123456 });
     expect(request.request.headers.has('Authorization')).toBe(false);
-    request.flush(fplChallenge);
-    expect(await proof).toEqual(fplChallenge);
-    expect(auth.authenticated()).toBe(false);
-    expect(auth.token()).toBeNull();
-  });
-  it('accepts a session only after the ownership proof succeeds', async () => {
-    const verified = firstValueFrom(auth.verify(fplChallenge.challengeId));
-    const request = http.expectOne('/api/auth/fpl/verify');
-    expect(request.request.body).toEqual({ challengeId: fplChallenge.challengeId });
     expect(request.request.withCredentials).toBe(true);
     request.flush(session);
-    expect(await verified).toEqual(session);
+    expect(await login).toEqual(session);
     expect(auth.authenticated()).toBe(true);
     expect(auth.token()).toBe(session.accessToken);
   });
-  it('uses bearer authorization to refresh the verified FPL profile', async () => {
-    auth.token.set(session.accessToken);
-    const synced = firstValueFrom(auth.syncProfile());
-    const request = http.expectOne('/api/auth/fpl/sync');
-    expect(request.request.headers.has('Authorization')).toBe(true);
-    request.flush(session.user);
-    expect(await synced).toEqual(session.user);
-  });
   it('sends unauthenticated navigation to FPL connection with the return URL', async () => {
-    const guard = TestBed.runInInjectionContext(() => authGuard({} as ActivatedRouteSnapshot, { url: '/fml/profile' } as RouterStateSnapshot)) as Observable<boolean | UrlTree>;
+    const guard = TestBed.runInInjectionContext(() => authGuard({} as ActivatedRouteSnapshot, { url: '/fml/team' } as RouterStateSnapshot)) as Observable<boolean | UrlTree>;
     const result = firstValueFrom(guard);
     http.expectOne('/api/auth/refresh').flush({}, { status: 401, statusText: 'Unauthorized' });
     const target = await result;
-    expect(TestBed.inject(Router).serializeUrl(target as UrlTree)).toBe('/fml/connect?returnUrl=%2Ffml%2Fprofile');
-  });
-  it('rejects regular users from administration', async () => {
-    const result = firstValueFrom(TestBed.runInInjectionContext(() => adminGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot)) as Observable<boolean | UrlTree>);
-    http.expectOne('/api/auth/refresh').flush(session);
-    expect(TestBed.inject(Router).serializeUrl(await result as UrlTree)).toBe('/fml');
+    expect(TestBed.inject(Router).serializeUrl(target as UrlTree)).toBe('/fml/connect?returnUrl=%2Ffml%2Fteam');
   });
 });

@@ -1,148 +1,223 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin, of, Subscription } from 'rxjs';
-import { Api, Notices } from './core';
-import { BUDGETS, Format, Gameweek, League, Manager, Team, editsLocked, selectionCost } from './models';
+import { finalize, forkJoin } from 'rxjs';
+import { Api } from './services/api.service';
+import { Notices } from './services/notices.service';
+import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost } from './models';
 
 @Component({
   selector: 'app-team-editor',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, DecimalPipe, DatePipe],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="page-heading"><div><p class="eyebrow">BUILD YOUR LEGACY</p><h1>{{id ? 'Edit your team' : 'Draft your team'}}</h1><p>Choose your format, recruit managers, and name your captain.</p></div></div>
-    @if (loading()) { <p role="status">Loading draft data…</p> }
-    @if (failed()) { <p role="alert">Draft data unavailable. <button mat-button (click)="load()">Retry</button></p> }
-    @if (locked()) { <p role="alert" class="notice">The official FPL deadline has passed. Team changes are locked until the current gameweek finishes.</p> }
-    @for (gw of gameweeks(); track gw.id) { @if (gw.current) { <p>Gameweek {{gw.id}} deadline: {{gw.deadline | date:'medium'}}. Edits close at the deadline and reopen when finished.</p> } }
-    <form [formGroup]="form" (ngSubmit)="save()" class="editor-layout">
-      <section class="panel">
-        <div class="form-stack">
-          <mat-form-field><mat-label>Team name</mat-label><input matInput formControlName="name" maxlength="60"><mat-error>A team name (2–60 characters) is required.</mat-error></mat-form-field>
-          <mat-form-field><mat-label>League</mat-label><mat-select formControlName="leagueId" (selectionChange)="changeLeague()">@for (league of leagues(); track league.id) { <mat-option [value]="league.id">{{league.name}}</mat-option> }</mat-select><mat-error>Select a league.</mat-error></mat-form-field>
-          <mat-form-field><mat-label>Squad format</mat-label><mat-select formControlName="format">@for (format of formats; track format) { <mat-option [value]="format">{{format}} managers · {{budgets[format] / 10}}M</mat-option> }</mat-select></mat-form-field>
-        </div>
-        <h2>Available managers</h2><p>Prices are in millions. Select exactly {{format()}} managers.</p>
-        @if (managersLoading()) { <p role="status">Loading managers…</p> }
-        <div class="manager-list">
-          @for (manager of managers(); track manager.id) {
-            <label class="manager-row" [class.selected]="selectedIds().includes(manager.id)">
-              <input type="checkbox" [checked]="selectedIds().includes(manager.id)" [disabled]="locked() || managersLoading()" (change)="toggle(manager.id)">
-              <span><strong>{{manager.name}}</strong><small>Rank #{{manager.rank}} · GW {{manager.gwPoints}} · Form {{manager.form}}</small></span><strong>{{manager.price / 10 | number:'1.1-1'}}M</strong>
-            </label>
-          } @empty { @if (!managersLoading()) { <p class="empty">No managers available. Select or import a league in the managers directory.</p> } }
-        </div>
-      </section>
-      <aside class="panel draft-summary">
-        <h2>Squad summary</h2><p>{{selectedIds().length}} / {{format()}} selected</p><strong class="budget" [class.over-budget]="spent() > budget()">{{(budget() - spent()) / 10 | number:'1.1-1'}}M</strong><p>Remaining of {{budget() / 10}}M</p><progress aria-label="Budget used" [value]="spent()" [max]="budget()"></progress>
-        @for (manager of selected(); track manager.id) { <p>{{manager.name}} <span class="float-right">{{manager.price / 10 | number:'1.1-1'}}M</span></p> }
-        <mat-form-field><mat-label>Captain (double points)</mat-label><mat-select formControlName="captainId">@for (manager of selected(); track manager.id) { <mat-option [value]="manager.id">{{manager.name}}</mat-option> }</mat-select><mat-error>Select a captain from your squad.</mat-error></mat-form-field>
-        @if (validation()) { <p role="status">{{validation()}}</p> }
-        <button mat-flat-button type="submit" [disabled]="busy() || loading() || failed() || managersLoading() || locked() || !!validation()">{{busy() ? 'Saving…' : 'Save team'}}</button>
-      </aside>
-    </form>
-  `,
+  templateUrl: './team-editor.html',
+  styleUrl: './team-editor.scss',
 })
 export class TeamEditor {
   private readonly api = inject(Api);
   private readonly notices = inject(Notices);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
-  private managerRequest?: Subscription;
-  readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id');
-  readonly formats: Format[] = [5, 7, 11];
-  readonly budgets = BUDGETS;
-  readonly leagues = signal<League[]>([]);
-  readonly gameweeks = signal<Gameweek[]>([]);
-  readonly managers = signal<Manager[]>([]);
-  readonly selectedIds = signal<string[]>([]);
-  readonly loading = signal(true);
+  private readonly formBuilder = inject(FormBuilder);
+  readonly budget = 250;
+  readonly loading = signal(false);
   readonly managersLoading = signal(false);
-  readonly failed = signal(false);
+  readonly leaguesLoading = signal(false);
   readonly busy = signal(false);
-  readonly form = inject(FormBuilder).nonNullable.group({
+  readonly leagues = signal<FplLeague[]>([]);
+  readonly selectedLeagueId = signal<number | null>(null);
+  readonly leaguePickerOpen = signal(false);
+  readonly selectedLeagueName = signal('');
+  readonly managers = signal<Manager[]>([]);
+  readonly selectedIds = signal<number[]>([]);
+  readonly activeManagerId = signal<number | null>(null);
+  readonly activeEmptySlot = signal<number | null>(null);
+  readonly captainId = signal<number | null>(null);
+  readonly team = signal<Team | null>(null);
+  readonly deadlineElapsed = signal(false);
+  private deadlineTimer?: ReturnType<typeof setTimeout>;
+  readonly selectedLeague = computed(() => this.leagues().find((league) => league.id === this.selectedLeagueId())
+    ?? (this.selectedLeagueId() ? { id: this.selectedLeagueId()!, name: this.selectedLeagueName() || `FPL league #${this.selectedLeagueId()}` } : null));
+  readonly editingExistingTeam = computed(() => !!this.team()?.leagueFplId);
+  readonly editsLocked = computed(() => (this.team()?.editsLocked ?? false) || this.deadlineElapsed());
+  readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
-    leagueId: ['', Validators.required],
-    format: [5 as Format, Validators.required],
-    captainId: ['', Validators.required],
+    leagueFplId: [0, [Validators.required, Validators.min(1), Validators.max(Number.MAX_SAFE_INTEGER)]],
   });
-  private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
-  readonly format = computed(() => this.formValue().format ?? 5);
-  readonly budget = computed(() => BUDGETS[this.format()]);
-  readonly selected = computed(() => this.managers().filter(m => this.selectedIds().includes(m.id)));
+  readonly selected = computed(() => this.managers().filter((manager) => this.selectedIds().includes(manager.fplId)));
+  readonly pitchManagers = computed(() => {
+    const selected = this.selected();
+    const captain = selected.find((manager) => manager.fplId === this.captainId());
+    return captain ? [captain, ...selected.filter((manager) => manager.fplId !== captain.fplId)] : selected;
+  });
+  readonly pitchSlots = computed(() => Array.from({ length: 5 }, (_, index) => this.pitchManagers()[index] ?? null));
+  readonly activeManager = computed(() => this.selected().find((manager) => manager.fplId === this.activeManagerId()) ?? null);
+  readonly suggestions = computed(() => {
+    if (this.activeManagerId() === null && this.activeEmptySlot() === null) return [];
+    return this.managers()
+      .filter((manager) => !this.selectedIds().includes(manager.fplId))
+      .sort((left, right) => left.rank - right.rank || right.gwPoints - left.gwPoints);
+  });
   readonly spent = computed(() => selectionCost(this.selected()));
-  readonly locked = signal(false);
   readonly validation = computed(() => {
-    if (!this.gameweeks().length) return 'Official gameweeks must be synchronized before creating a team.';
-    if (this.selectedIds().length !== this.format()) return `Select exactly ${this.format()} managers.`;
-    if (this.selected().length !== this.selectedIds().length) return 'Some selected managers are no longer available.';
-    if (this.spent() > this.budget()) return 'Your squad exceeds the budget.';
-    if (!this.selectedIds().includes(this.formValue().captainId ?? '')) return 'Choose a captain from your squad.';
+    if (this.selectedIds().length !== 5) return 'Select exactly five managers.';
+    if (this.selected().length !== 5) return 'Load a league and select five available managers.';
+    if (this.spent() > this.budget) return 'The squad exceeds the 25M budget.';
+    if (!this.selectedIds().includes(this.captainId() ?? 0)) return 'Choose a captain from your squad.';
     return '';
   });
+
   constructor() {
-    // Recheck the deadline when interacting, not only when opening the editor.
-    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.updateLock());
-    this.load();
+    this.destroyRef.onDestroy(() => { if (this.deadlineTimer) clearTimeout(this.deadlineTimer); });
+    this.loadTeam();
   }
-  load(): void {
+
+  private scheduleDeadlineLock(deadline: string | null): void {
+    if (this.deadlineTimer) clearTimeout(this.deadlineTimer);
+    this.deadlineElapsed.set(false);
+    if (!deadline) return;
+    const delay = Date.parse(deadline) - Date.now();
+    if (!Number.isFinite(delay) || delay <= 0) {
+      this.deadlineElapsed.set(true);
+      return;
+    }
+    this.deadlineTimer = setTimeout(() => this.deadlineElapsed.set(true), delay);
+  }
+
+  loadTeam(): void {
     this.loading.set(true);
-    this.failed.set(false);
-    forkJoin({
-      leagues: this.api.get<League[]>('leagues'),
-      gameweeks: this.api.get<Gameweek[]>('gameweeks'),
-      team: this.id ? this.api.get<Team>(`teams/${encodeURIComponent(this.id)}`) : of(null),
-    }).pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: data => {
-        this.leagues.set(data.leagues);
-        this.gameweeks.set(data.gameweeks);
-        this.updateLock();
-        if (data.team) {
-          const { name, leagueId, format, captainId } = data.team;
-          this.form.patchValue({ name, leagueId, format, captainId });
-          this.form.controls.leagueId.disable();
-          this.selectedIds.set(data.team.managerIds);
-          this.loadManagers(leagueId);
+    this.leaguesLoading.set(true);
+    forkJoin({ team: this.api.get<Team>('team'), leagues: this.api.get<FplLeague[]>('team/leagues') })
+      .pipe(finalize(() => { this.loading.set(false); this.leaguesLoading.set(false); }))
+      .subscribe({
+      next: ({ team, leagues }) => {
+        this.team.set(team);
+        this.scheduleDeadlineLock(team.currentDeadline);
+        this.leagues.set(leagues);
+        this.selectedLeagueName.set(team.leagueName);
+        this.leaguePickerOpen.set(!team.leagueFplId);
+        const leagueFplId = team.leagueFplId ?? 0;
+        this.form.patchValue({ name: team.name, leagueFplId }, { emitEvent: false });
+        if (team.leagueFplId) {
+          this.selectedLeagueId.set(team.leagueFplId);
+          this.selectedIds.set(team.managerIds);
+          this.captainId.set(team.captainId);
         }
+        if (leagueFplId) this.loadManagers(leagueFplId);
       },
-      error: () => this.failed.set(true),
+      error: () => {},
     });
   }
-  private updateLock(): void { this.locked.set(editsLocked(this.gameweeks())); }
-  changeLeague(): void {
-    this.selectedIds.set([]);
-    this.form.controls.captainId.setValue('');
-    this.loadManagers(this.form.controls.leagueId.value);
-  }
-  private loadManagers(leagueId: string): void {
-    this.managerRequest?.unsubscribe();
-    this.managers.set([]);
+
+  loadManagers(leagueFplId = this.form.controls.leagueFplId.value): void {
+    if (!Number.isSafeInteger(leagueFplId) || leagueFplId < 1 || this.managersLoading()) return;
+    this.selectedLeagueId.set(leagueFplId);
+    this.leaguePickerOpen.set(false);
     this.managersLoading.set(true);
-    this.managerRequest = this.api.get<Manager[]>(`managers?leagueId=${encodeURIComponent(leagueId)}`)
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.managersLoading.set(false)))
-      .subscribe({ next: rows => this.managers.set(rows), error: () => {} });
+    this.api.get<ManagerLeague>(`team/managers?leagueFplId=${encodeURIComponent(leagueFplId)}`)
+      .pipe(finalize(() => this.managersLoading.set(false)))
+      .subscribe({
+        next: (result) => {
+          this.managers.set(result.managers);
+          this.selectedLeagueName.set(result.leagueName);
+          this.team.update((team) => team ? { ...team, leagueName: result.leagueName } : team);
+          const available = new Set(result.managers.map((manager) => manager.fplId));
+          this.selectedIds.update((ids) => ids.filter((id) => available.has(id)));
+        },
+        error: () => this.managers.set([]),
+      });
   }
-  toggle(id: string): void {
-    this.updateLock();
-    if (this.locked()) return;
-    this.selectedIds.update(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
-    if (!this.selectedIds().includes(this.form.controls.captainId.value)) this.form.controls.captainId.setValue('');
+
+  changeLeague(leagueFplId: number): void {
+    if (this.editingExistingTeam() || this.editsLocked()) return;
+    if (leagueFplId === this.selectedLeagueId()) {
+      this.leaguePickerOpen.set(false);
+      return;
+    }
+    this.selectedLeagueName.set(this.leagues().find((league) => league.id === leagueFplId)?.name ?? '');
+    this.form.controls.leagueFplId.setValue(leagueFplId);
+    this.selectedIds.set([]);
+    this.captainId.set(null);
+    this.activeManagerId.set(null);
+    this.activeEmptySlot.set(null);
+    this.managers.set([]);
+    this.loadManagers(leagueFplId);
   }
+
+  selectManager(id: number): void {
+    if (this.editsLocked()) return;
+    this.activeEmptySlot.set(null);
+    this.activeManagerId.set(this.activeManagerId() === id ? null : id);
+  }
+
+  selectEmptySlot(position: number): void {
+    if (this.editsLocked()) return;
+    this.activeManagerId.set(null);
+    this.activeEmptySlot.set(this.activeEmptySlot() === position ? null : position);
+  }
+
+  addManager(id: number): void {
+    if (!this.canAdd(id)) return;
+    const manager = this.managers().find((candidate) => candidate.fplId === id);
+    if (!manager) return;
+    this.selectedIds.update((ids) => [...ids, id]);
+    if (this.captainId() === null) this.captainId.set(id);
+    this.activeEmptySlot.set(null);
+  }
+
+  removeManager(): void {
+    if (this.editsLocked()) return;
+    const id = this.activeManagerId();
+    if (id === null) return;
+    const selectedIds = this.selectedIds().filter((managerId) => managerId !== id);
+    this.selectedIds.set(selectedIds);
+    if (this.captainId() === id) this.captainId.set(selectedIds[0] ?? null);
+    this.activeManagerId.set(null);
+  }
+
+  replaceManager(replacementId: number): void {
+    if (this.editsLocked()) return;
+    const id = this.activeManagerId();
+    if (id === null || !this.canReplace(replacementId)) return;
+    this.selectedIds.update((ids) => ids.map((managerId) => managerId === id ? replacementId : managerId));
+    if (this.captainId() === id) this.captainId.set(replacementId);
+    this.activeManagerId.set(null);
+  }
+
+  canReplace(replacementId: number): boolean {
+    const active = this.activeManager();
+    const replacement = this.managers().find((manager) => manager.fplId === replacementId);
+    return !this.editsLocked() && !!active && !!replacement && this.spent() - active.price + replacement.price <= this.budget;
+  }
+
+  canAdd(managerId: number): boolean {
+    const manager = this.managers().find((candidate) => candidate.fplId === managerId);
+    return !this.editsLocked() && this.activeEmptySlot() !== null && this.selectedIds().length < 5
+      && !!manager && this.spent() + manager.price <= this.budget;
+  }
+
   save(): void {
-    this.updateLock();
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.validation() || this.locked() || this.busy() || this.loading() || this.failed() || this.managersLoading()) return;
+    if (this.form.invalid || this.validation() || this.busy() || this.managersLoading() || this.editsLocked()) return;
     this.busy.set(true);
-    const body = { ...this.form.getRawValue(), managerIds: this.selectedIds() };
-    const request = this.id ? this.api.put<Team>(`teams/${encodeURIComponent(this.id)}`, body) : this.api.post<Team>('teams', body);
-    request.pipe(finalize(() => this.busy.set(false))).subscribe({
-      next: () => { this.notices.message.set('Team saved.'); void this.router.navigate(['/fml']); },
+    const body: TeamInput = {
+      name: this.form.controls.name.value,
+      leagueFplId: this.form.controls.leagueFplId.value,
+      managerIds: this.selectedIds(),
+      captainId: this.captainId()!,
+    };
+    this.api.put<Team>('team', body).pipe(finalize(() => this.busy.set(false))).subscribe({
+      next: (team) => {
+        this.notices.message.set('Your team was saved.');
+        this.team.set(team);
+        this.scheduleDeadlineLock(team.currentDeadline);
+        void this.router.navigate(['/fml']);
+      },
       error: () => {},
     });
   }
