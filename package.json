@@ -12,6 +12,7 @@
   "engines": {
     "node": "22.x"
   },
+  "type": "module",
   "private": true,
   "packageManager": "npm@10.9.8",
   "dependencies": {
