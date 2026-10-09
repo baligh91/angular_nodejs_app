@@ -35,10 +35,11 @@ p { margin: .5rem 0 1rem; }
 .fml-header { border-bottom: 1px solid #dce7df; padding: 1rem max(1rem, calc((100vw - 1280px)/2)); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; background: #fff; }
 .brand { display: flex; align-items: center; gap: .75rem; font-weight: 750; color: #173c2b; text-decoration: none; }
 .brand-mark { padding: .55rem .7rem; border-radius: .4rem; background: #08794f; color: white; font-weight: 800; }
+.fml-header nav { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .active { background: #e6f3eb !important; color: #075e3e !important; }
 .fml-content { max-width: 1280px; margin: auto; padding: 2.5rem 1.25rem; }
 .fml-app footer { text-align: center; padding: 2rem; color: #64766b; font-size: .9rem; }
-.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; min-width: 0; }
 .eyebrow { color: #08794f; letter-spacing: .08em; font-size: .75rem; font-weight: 750; }
 .panel { background: #fff; border: 1px solid #dce7df; border-radius: .5rem; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px #173c2b0a; }
 .panel p, .page-heading p, .hero p { color: #52665a; }
@@ -49,12 +50,14 @@ p { margin: .5rem 0 1rem; }
 .tag { display: inline-block; padding: .2rem .55rem; border-radius: .25rem; background: #e6f3eb; color: #075e3e; font-size: .8rem; }
 .empty { text-align: center; padding: 2rem; }
 .notice { max-width: 1280px; margin: 1rem auto; padding: .75rem 1.25rem; border: 1px solid #e7a0b2; background: #fff2f5; color: #75253c; border-radius: .4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.notice > span { min-width: 0; overflow-wrap: anywhere; }
 .success { border-left: 3px solid #08794f; padding: 1rem; }
 .connect-layout { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 4rem; min-height: 65vh; }
-.hero h1 { font-size: clamp(2.6rem, 5vw, 4.5rem); }
+.hero h1 { font-size: clamp(2.2rem, 5vw, 4.5rem); }
 .form-stack { display: flex; flex-direction: column; gap: 1rem; }
+.form-stack mat-form-field { width: 100%; }
 .verification-code { padding: 1rem; background: #eff7f1; border: 1px solid #08794f; border-radius: .35rem; font-size: 1.25rem; overflow-wrap: anywhere; user-select: all; }
-.editor-layout { display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; align-items: start; }
+.editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 1.5rem; align-items: start; }
 .draft-summary { position: sticky; top: 1rem; }
 .draft-summary mat-form-field { width: 100%; margin-top: 1rem; }
 .budget { font-size: 2.5rem; color: #08794f; display: block; }
@@ -64,11 +67,11 @@ progress { width: 100%; height: .6rem; accent-color: #08794f; margin-bottom: 1re
 .manager-row { display: flex; align-items: center; gap: 1rem; padding: 1rem .75rem; border-bottom: 1px solid #dce7df; cursor: pointer; border-radius: .35rem; }
 .manager-row.selected { background: #e6f3eb; }
 .manager-row input { width: 1.2rem; height: 1.2rem; accent-color: #08794f; flex-shrink: 0; }
-.manager-row span { flex: 1; }
+.manager-row span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .manager-row small { display: block; color: #64766b; }
 .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
 .filter-bar mat-form-field { min-width: 200px; flex: 1; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; }
 caption { text-align: left; color: #cbd5e1; padding: .5rem 0 1rem; }
 th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #e1eae3; white-space: nowrap; }
@@ -106,7 +109,7 @@ thead { background: #edf5ef; color: #375546; font-size: .85rem; }
 .manager-actions-heading p { margin: 0; }
 .remove-manager { margin-bottom: 12px; }
 .manager-browser h3 { margin: 8px 0; }
-.replacement-table { max-height: min(60vh,560px); overflow: auto; border: 1px solid #d5e3d9; border-radius: 4px; background: #fff; }
+.replacement-table { max-width: 100%; max-height: min(60vh,560px); overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border: 1px solid #d5e3d9; border-radius: 4px; background: #fff; }
 .replacement-table table { min-width: 700px; }
 .replacement-table thead { position: sticky; z-index: 2; top: 0; }
 .replacement-table th, .replacement-table td { padding: 9px 12px; }
@@ -121,9 +124,33 @@ thead { background: #edf5ef; color: #375546; font-size: .85rem; }
   .team-builder-layout.manager-selection-open { grid-template-columns: minmax(0,1fr); }
   .draft-summary { position: static; }
   .page-heading { align-items: flex-start; flex-direction: column; }
-  .stats-grid { grid-template-columns: 1fr; gap: 0; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
   .manager-browser { max-height: none; }
   .fml-content { padding: 1.5rem 1rem; }
   .fml-header { padding: 1rem; }
 }
-@media (max-width: 560px) { .budget-summary { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 560px) {
+  h1 { font-size: clamp(1.8rem, 8vw, 2.4rem); }
+  .fml-header { align-items: stretch; gap: .75rem; padding: .75rem 1rem; }
+  .fml-header nav { width: 100%; }
+  .fml-header nav > * { flex: 1 1 auto; }
+  .fml-content { padding: 1.25rem .75rem; }
+  .panel { padding: 1rem; }
+  .notice { align-items: flex-start; margin: .75rem; padding: .75rem; }
+  .connect-layout { gap: 1rem; min-height: 0; }
+  .hero h1 { font-size: clamp(2rem, 9vw, 2.6rem); }
+  .auth-modes { display: flex; }
+  .auth-modes button { flex: 1 1 0; }
+  .stats-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .manager-actions-heading { align-items: flex-start; flex-wrap: wrap; }
+  .budget-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .budget-summary > div { min-width: 0; padding: .65rem; }
+  .budget-summary strong { font-size: 1.15rem; }
+  .fml-app footer { padding: 1.5rem .75rem; }
+}
+@media (max-width: 360px) {
+  .brand { gap: .5rem; font-size: .95rem; }
+  .fml-content { padding-right: .5rem; padding-left: .5rem; }
+  .panel { padding: .75rem; }
+  .budget-summary { grid-template-columns: minmax(0, 1fr); }
+}

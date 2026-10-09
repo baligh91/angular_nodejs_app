@@ -32,7 +32,7 @@ button.pitch-player { cursor: pointer; }
 .shirt-mark { display: grid; flex: 0 0 32px; width: 32px; height: 30px; place-items: center; border-radius: 10px 10px 4px 4px; color: #fff; background: #e34b72; font-size: .75rem; font-weight: 800; }
 .field-name { display: grid; gap: 2px; min-width: 0; }
 .field-name strong { overflow-wrap: anywhere; }
-.field-name small { color: #5e7065; }
+.field-name small { color: #5e7065; overflow-wrap: anywhere; }
 .empty-slot { justify-content: center; border-style: dashed; color: #fff; background: #174c35a6; box-shadow: none; text-align: center; }
 @media (max-width: 560px) {
   .football-pitch { grid-template-rows: repeat(3, minmax(74px, auto)); gap: 8px 6px; min-height: 300px; padding: 22px 8px; }
