@@ -53,7 +53,7 @@ describe('single-document FML API', () => {
   afterAll(async () => { await app?.close(); await mongo?.stop(); });
 
   it('stores password-backed accounts, one format-5 team, and scores in only users', async () => {
-    const password = 'correct horse battery staple';
+    const password = 'abc123';
     const registration = await request(app.getHttpServer()).post('/api/auth/register')
       .send({ fplId: 72021, password }).expect(201);
     expect(registration.body.user).not.toHaveProperty('passwordHash');

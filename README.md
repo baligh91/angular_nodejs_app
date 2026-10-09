@@ -11,7 +11,7 @@ Application FML simplifiée : un compte par ID FPL, une équipe de cinq managers
 
 ## Connexion
 
-Sur `/fml/connect`, créer un compte avec l’ID FPL et un mot de passe d’au moins 12 caractères, ou se connecter avec ces identifiants. Le profil FPL public est récupéré lors de l’inscription. Le mot de passe est stocké sous forme de hash scrypt dans le document `users`; il n’est jamais renvoyé par l’API.
+Sur `/fml/connect`, créer un compte avec l’ID FPL et un mot de passe d’au moins 6 caractères, ou se connecter avec ces identifiants. Le profil FPL public est récupéré lors de l’inscription. Le mot de passe est stocké sous forme de hash scrypt dans le document `users`; il n’est jamais renvoyé par l’API.
 
 **Limite d’identité :** l’ID FPL est public. Le mot de passe protège le compte après son inscription, mais l’application ne vérifie pas que la personne qui crée le compte possède réellement cet ID. Quelqu’un peut donc inscrire en premier un ID FPL non encore enregistré. Ne réutilisez pas le mot de passe d’un autre service.
 

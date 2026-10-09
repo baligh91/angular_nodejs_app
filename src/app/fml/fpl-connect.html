@@ -24,10 +24,11 @@
             <mat-form-field><mat-label>Password</mat-label>
                 <input matInput type="password" formControlName="password" [readonly]="busy()"
                     [attr.autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'">
+                <mat-hint>Use at least 6 characters.</mat-hint>
                 @if (form.controls.password.hasError('required')) {
                     <mat-error>Enter your password.</mat-error>
                 } @else if (form.controls.password.hasError('minlength')) {
-                    <mat-error>Use at least 12 characters.</mat-error>
+                    <mat-error>Use at least 6 characters.</mat-error>
                 } @else if (form.controls.password.hasError('maxlength')) {
                     <mat-error>Use no more than 128 characters.</mat-error>
                 }

@@ -35,7 +35,7 @@ Toutes les routes sont sous `/api`.
 | `POST` | `/team/sync` | Actualise les GW terminées et le total |
 | `GET` | `/health` | Vérifie la connexion MongoDB |
 
-L’API limite l’inscription et la connexion à cinq requêtes par minute et vérifie l’origine des opérations de session. Les mots de passe ont au moins 12 caractères à l’inscription et ne sont stockés que sous forme de hash scrypt. L’ID FPL reste public et sa propriété n’est pas vérifiée : un visiteur peut inscrire en premier un ID encore disponible. Ne pas présenter cette inscription comme une preuve d’identité FPL.
+L’API limite l’inscription et la connexion à cinq requêtes par minute et vérifie l’origine des opérations de session. Les mots de passe ont au moins 6 caractères et ne sont stockés que sous forme de hash scrypt. L’ID FPL reste public et sa propriété n’est pas vérifiée : un visiteur peut inscrire en premier un ID encore disponible. Ne pas présenter cette inscription comme une preuve d’identité FPL.
 
 ## Installation et lancement
 

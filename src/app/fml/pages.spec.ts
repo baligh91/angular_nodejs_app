@@ -30,17 +30,28 @@ describe('single-document FML workflow', () => {
   });
   afterEach(() => http.verify());
 
+  it('requires six password characters and shows the requirement below the field', () => {
+    const fixture = TestBed.createComponent(FplConnect);
+    const password = fixture.componentInstance.form.controls.password;
+    password.setValue('12345');
+    expect(password.hasError('minlength')).toBe(true);
+    password.setValue('123456');
+    expect(password.valid).toBe(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Use at least 6 characters.');
+  });
+
   it('creates an account with an FPL ID and matching password', async () => {
     const fixture = TestBed.createComponent(FplConnect);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     fixture.componentInstance.form.controls.fplId.setValue(123456);
     fixture.componentInstance.setMode('register');
-    fixture.componentInstance.form.controls.password.setValue('correct horse battery staple');
-    fixture.componentInstance.form.controls.confirmPassword.setValue('correct horse battery staple');
+    fixture.componentInstance.form.controls.password.setValue('abc123');
+    fixture.componentInstance.form.controls.confirmPassword.setValue('abc123');
     fixture.componentInstance.submit();
     const request = http.expectOne('/api/auth/register');
     expect(request.request.body).toEqual({
-      fplId: 123456, password: 'correct horse battery staple',
+      fplId: 123456, password: 'abc123',
     });
     request.flush(fplSession);
     expect(TestBed.inject(Auth).authenticated()).toBe(true);

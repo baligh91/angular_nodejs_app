@@ -7,12 +7,13 @@ class FplIdDto {
 }
 
 export class FplRegisterDto extends FplIdDto {
-  @ApiProperty({ minLength: 12, maxLength: 128 })
-  @IsString() @Length(12, 128) password!: string;
+  @ApiProperty({ minLength: 6, maxLength: 128 })
+  @IsString() @Length(6, 128) password!: string;
 }
 
 export class FplLoginDto extends FplIdDto {
-  @ApiProperty() @IsString() @Length(1, 128) password!: string;
+  @ApiProperty({ minLength: 6, maxLength: 128 })
+  @IsString() @Length(6, 128) password!: string;
 }
 
 export class ManagerLeagueQueryDto {

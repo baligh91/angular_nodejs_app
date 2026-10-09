@@ -131,9 +131,10 @@ thead { background: #edf5ef; color: #375546; font-size: .85rem; }
 }
 @media (max-width: 560px) {
   h1 { font-size: clamp(1.8rem, 8vw, 2.4rem); }
-  .fml-header { align-items: stretch; gap: .75rem; padding: .75rem 1rem; }
-  .fml-header nav { width: 100%; }
-  .fml-header nav > * { flex: 1 1 auto; }
+  .fml-header { align-items: stretch; gap: 0; padding: 0; }
+  .brand { width: 100%; padding: .75rem 1rem; }
+  .fml-header nav { width: 100%; gap: 0; border-top: 1px solid #dce7df; }
+  .fml-header nav > * { flex: 1 1 0; min-width: 0; padding-inline: .25rem; white-space: normal; }
   .fml-content { padding: 1.25rem .75rem; }
   .panel { padding: 1rem; }
   .notice { align-items: flex-start; margin: .75rem; padding: .75rem; }

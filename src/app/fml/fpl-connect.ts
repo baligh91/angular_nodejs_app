@@ -27,7 +27,7 @@ export class FplConnect {
       Validators.required, Validators.min(1), Validators.max(Number.MAX_SAFE_INTEGER), Validators.pattern(/^\d+$/),
     ]),
     password: new FormControl('', { nonNullable: true, validators: [
-      Validators.required, Validators.minLength(12), Validators.maxLength(128),
+      Validators.required, Validators.minLength(6), Validators.maxLength(128),
     ] }),
     confirmPassword: new FormControl('', { nonNullable: true }),
   });
