@@ -28,6 +28,26 @@ describe('public FPL entry adapter', () => {
     await expect(client().entry(123)).rejects.toBeInstanceOf(NotFoundException);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+
+  it('returns the manager current-gameweek and season points', async () => {
+    const fetcher = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      ...raw(), current_event: 8,
+    }), { status: 200 }));
+    await expect(client().managerScore(123)).resolves.toEqual({
+      currentGameweek: 8, currentGameweekPoints: 20, totalPoints: 100,
+    });
+    expect(fetcher.mock.calls[0][0].toString()).toContain('/entry/123/');
+  });
+
+  it.each([
+    { id: 999 }, { current_event: '8' }, { summary_event_points: '20' },
+  ])('rejects invalid manager score fields: %j', async (override) => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      ...raw(), current_event: 8, ...override,
+    }), { status: 200 }));
+    await expect(client().managerScore(123)).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
   it.each([
     { id: 999 }, { player_first_name: 123 }, { name: 'x'.repeat(101) },
   ])('rejects invalid or mismatched upstream fields: %j', async (override) => {

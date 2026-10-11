@@ -22,6 +22,8 @@ export interface Manager {
   gwPoints: number;
   form: number;
   price: number;
+  currentGameweek?: number | null;
+  currentGameweekPoints?: number;
   priceHistory?: { gw: number; price: number; delta: number }[];
 }
 export type Format = 5;
@@ -53,6 +55,7 @@ export interface Team {
   members: Manager[];
   scores: TeamScore[];
   totalScore: number;
+  seasonScore: number;
   editsLocked: boolean;
   firstScoringGw: number | null;
   currentDeadline: string | null;
@@ -61,9 +64,10 @@ export interface ManagerLeague { leagueFplId: number; leagueName: string; manage
 export interface TeamStanding {
   rank: number;
   ownerFplId: number;
-  ownerName: string;
   teamName: string;
-  points: number;
+  gw: number | null;
+  gwScore: number;
+  seasonScore: number;
 }
 export const BUDGETS: Record<5, number> = { 5: 250 };
 export function selectionCost(managers: readonly Manager[]): number {

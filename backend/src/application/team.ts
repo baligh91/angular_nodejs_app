@@ -11,6 +11,8 @@ export interface TeamInput {
   captainId: number;
 }
 
+const firstSeasonScoreGameweek = 6;
+
 export function firstScoringGameweek(events: Awaited<ReturnType<FplClient['bootstrap']>>): number {
   const current = events.find((event) => event.is_current);
   if (current) return current.id + 1;
@@ -54,14 +56,64 @@ export class TeamService {
   }
 
   async standings(leagueFplId: number) {
-    const users = await this.db.users.find({ 'team.leagueFplId': leagueFplId, disabled: false })
-      .sort({ totalScore: -1, fplId: 1 }).lean();
-    return users.map((user, index) => ({
+    const users = await this.db.users.find({ 'team.leagueFplId': leagueFplId, disabled: false }).lean();
+    const events = await this.fpl.bootstrap();
+    const current = events.find((event) => event.is_current && !event.finished);
+    const latestCompleted = current ? undefined : events
+      .filter((event) => event.finished && event.data_checked)
+      .sort((a, b) => b.id - a.id)[0];
+    const gw = current?.id ?? latestCompleted?.id ?? null;
+    const managerIds = current
+      ? [...new Set(users.flatMap((user) => {
+        const snapshots = user.team?.pendingSnapshots ?? [];
+        return snapshots.find((snapshot) => snapshot.gw === current.id)?.managerIds
+          ?? user.team?.managerIds ?? [];
+      }))]
+      : [];
+    const liveScores = await Promise.all(managerIds.map(async (id) =>
+      [id, await this.fpl.managerScore(id)] as const));
+    const scoresByManager = new Map(liveScores);
+    const rows = users.map((user) => {
+      const team = user.team!;
+      let seasonScore = (user.scoreHistory ?? [])
+        .filter((score) => score.gw >= firstSeasonScoreGameweek)
+        .reduce((total, score) => total + score.points, 0);
+      const currentSnapshot = current
+        ? team.pendingSnapshots?.find((snapshot) => snapshot.gw === current.id)
+        : undefined;
+      const activeManagerIds = currentSnapshot?.managerIds ?? team.managerIds;
+      const livePoints = new Map<number, number>();
+      if (current) {
+        for (const id of activeManagerIds) {
+          const managerScore = scoresByManager.get(id);
+          if (managerScore?.currentGameweek === current.id) {
+            livePoints.set(id, managerScore.currentGameweekPoints);
+          }
+        }
+      }
+      const completedScore = latestCompleted
+        ? user.scoreHistory?.find((score) => score.gw === latestCompleted.id)
+        : undefined;
+      const currentScore = current && activeManagerIds.every((id) => livePoints.has(id))
+        ? scoreManagers(activeManagerIds, currentSnapshot?.captainId ?? team.captainId, livePoints)
+        : null;
+      if (current && current.id >= firstSeasonScoreGameweek && currentScore !== null) {
+        seasonScore += currentScore;
+      }
+      const gwScore = currentScore ?? completedScore?.points ?? 0;
+      return {
+        ownerFplId: user.fplId,
+        ownerName: `${user.firstName} ${user.lastName}`.trim(),
+        teamName: team.name,
+        gwScore,
+        seasonScore,
+        gw,
+      };
+    });
+    rows.sort((a, b) => b.seasonScore - a.seasonScore || a.ownerFplId - b.ownerFplId);
+    return rows.map((row, index) => ({
       rank: index + 1,
-      ownerFplId: user.fplId,
-      ownerName: `${user.firstName} ${user.lastName}`.trim(),
-      teamName: user.team?.name ?? '',
-      points: user.totalScore ?? 0,
+      ...row,
     }));
   }
 
@@ -136,9 +188,35 @@ export class TeamService {
     return this.view(user);
   }
 
-  async view(user: User) {
+  async view(user: User, includeLiveManagerScores = false) {
     const events = await this.fpl.bootstrap();
     const current = events.find((event) => event.is_current && !event.finished);
+    const team = user.team;
+    const managers = team?.managers ?? [];
+    const managerScores = includeLiveManagerScores && team
+      ? await Promise.all(managers.map(async (manager) => [
+        manager.fplId, await this.fpl.managerScore(manager.fplId),
+      ] as const))
+      : [];
+    const scoresByManager = new Map(managerScores);
+    let currentScore: number | null = null;
+    if (includeLiveManagerScores && current && team) {
+      const snapshot = team.pendingSnapshots?.find((item) => item.gw === current.id);
+      const managerIds = snapshot?.managerIds ?? team.managerIds;
+      const captainId = snapshot?.captainId ?? team.captainId;
+      await Promise.all(managerIds.filter((id) => !scoresByManager.has(id)).map(async (id) => {
+        scoresByManager.set(id, await this.fpl.managerScore(id));
+      }));
+      const points = new Map([...scoresByManager]
+        .filter(([, score]) => score.currentGameweek === current.id)
+        .map(([id, score]) => [id, score.currentGameweekPoints]));
+      if (managerIds.every((id) => points.has(id))) {
+        currentScore = scoreManagers(managerIds, captainId, points);
+      }
+    }
+    const completedSeasonScore = (user.scoreHistory ?? [])
+      .filter((score) => score.gw >= firstSeasonScoreGameweek)
+      .reduce((total, score) => total + score.points, 0);
     return {
       id: user.fplId, fplId: user.fplId, name: user.team?.name ?? '',
       leagueFplId: user.team?.leagueFplId ?? null, leagueName: user.team?.leagueName ?? '',
@@ -146,7 +224,18 @@ export class TeamService {
       format: 5, managerIds: user.team?.managerIds ?? [], captainId: user.team?.captainId ?? null,
       currentDeadline: current?.deadline_time ?? null,
       budget: user.team?.budget ?? 250, spent: user.team?.spent ?? 0,
-      members: user.team?.managers ?? [], scores: user.scoreHistory ?? [], totalScore: user.totalScore ?? 0,
+      members: managers.map((manager) => {
+        const score = scoresByManager.get(manager.fplId);
+        return {
+          id: manager.fplId, fplId: manager.fplId, name: manager.name, rank: manager.rank,
+          price: manager.price, totalPoints: score?.totalPoints ?? 0,
+          lastGwPoints: score?.currentGameweekPoints ?? 0, gwPoints: score?.currentGameweekPoints ?? 0,
+          form: score?.currentGameweekPoints ?? 0, currentGameweek: score?.currentGameweek ?? null,
+          currentGameweekPoints: score?.currentGameweekPoints ?? 0,
+        };
+      }), scores: user.scoreHistory ?? [], totalScore: user.totalScore ?? 0,
+      seasonScore: completedSeasonScore
+        + (current && current.id >= firstSeasonScoreGameweek ? currentScore ?? 0 : 0),
       editsLocked: gameweekEditsLocked(events),
     };
   }

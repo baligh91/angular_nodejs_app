@@ -6,7 +6,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { finalize } from 'rxjs';
 import { Auth } from './services/auth.service';
-import { Notices } from './services/notices.service';
 
 @Component({
   selector: 'app-fpl-connect',
@@ -17,7 +16,6 @@ import { Notices } from './services/notices.service';
 })
 export class FplConnect {
   private readonly auth = inject(Auth);
-  private readonly notices = inject(Notices);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly busy = signal(false);
@@ -53,7 +51,6 @@ export class FplConnect {
       : this.auth.login(fplId, password);
     authenticate.pipe(finalize(() => this.busy.set(false))).subscribe({
       next: () => {
-        this.notices.message.set(this.mode() === 'register' ? 'Account created.' : 'Signed in.');
         const target = this.route.snapshot.queryParamMap.get('returnUrl');
         void this.router.navigateByUrl(target?.startsWith('/fml/') && !target.startsWith('/fml/connect') ? target : '/fml');
       },

@@ -37,6 +37,10 @@ describe('single-document FML API', () => {
     db = app.get(Database);
     const fpl = app.get(FplClient);
     jest.spyOn(fpl, 'entry').mockImplementation(async (id) => fplProfile(id));
+    jest.spyOn(fpl, 'managerScore').mockImplementation(async (id) => ({
+      currentGameweek: events.find((event) => event.is_current)?.id ?? null,
+      currentGameweekPoints: id % 10, totalPoints: 1000 + id % 100,
+    }));
     jest.spyOn(fpl, 'bootstrap').mockResolvedValue(events);
     jest.spyOn(fpl, 'standings').mockResolvedValue({
       name: 'Public league', managers: Array.from({ length: 20 }, (_, index) => ({
@@ -108,6 +112,10 @@ describe('single-document FML API', () => {
       .set('Authorization', `Bearer ${token}`).expect(200);
     expect(synced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 106, total: 106 })]);
     expect(synced.body.totalScore).toBe(106);
+    expect(synced.body.seasonScore).toBe(0);
+    expect(synced.body.members[0]).toMatchObject({
+      fplId: managerIds[0], currentGameweek: 3, currentGameweekPoints: 6, totalPoints: 1016,
+    });
 
     const secondSynced = await request(app.getHttpServer()).post('/api/team/sync')
       .set('Authorization', `Bearer ${secondLogin.body.accessToken}`).expect(200);
@@ -116,14 +124,22 @@ describe('single-document FML API', () => {
     expect(secondSynced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 76, total: 76 })]);
     expect(thirdSynced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 80, total: 80 })]);
 
+    for (const [fplId, points] of [[72021, 42], [72022, 21], [72023, 30]]) {
+      await db.users.updateOne({ fplId }, { $push: { scoreHistory: {
+        gw: 6, points, total: points, managerIds: [], captainId: 1,
+        teamName: 'GW 6 test score', capturedAt: new Date(),
+      } } });
+    }
+    events[2] = { ...events[2], id: 6 };
     const standings = await request(app.getHttpServer()).get('/api/team/standings?leagueFplId=999001')
       .set('Authorization', `Bearer ${token}`).expect(200);
     expect(standings.body).toEqual([
-      expect.objectContaining({ rank: 1, ownerFplId: 72021, teamName: 'Five managers', points: 106 }),
-      expect.objectContaining({ rank: 2, ownerFplId: 72023, teamName: 'FML Third', points: 80 }),
-      expect.objectContaining({ rank: 3, ownerFplId: 72022, teamName: 'FML Runner Up', points: 76 }),
+      expect.objectContaining({ rank: 1, ownerFplId: 72021, teamName: 'Five managers', gw: 6, gwScore: 36, seasonScore: 78 }),
+      expect.objectContaining({ rank: 2, ownerFplId: 72023, teamName: 'FML Third', gw: 6, gwScore: 20, seasonScore: 50 }),
+      expect.objectContaining({ rank: 3, ownerFplId: 72022, teamName: 'FML Runner Up', gw: 6, gwScore: 16, seasonScore: 37 }),
     ]);
 
+    events[2] = { ...events[2], id: 3 };
     const user = await db.users.findOne({ fplId: 72021 }).lean();
     expect(user?.team?.managerIds).toEqual(managerIds);
     expect(user?.team?.firstScoringGw).toBe(2);

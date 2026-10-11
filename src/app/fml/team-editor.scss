@@ -34,6 +34,7 @@ button.pitch-player { cursor: pointer; }
 .field-name strong { overflow-wrap: anywhere; }
 .field-name small { color: #5e7065; overflow-wrap: anywhere; }
 .empty-slot { justify-content: center; border-style: dashed; color: #fff; background: #174c35a6; box-shadow: none; text-align: center; }
+.budget-congrats { margin: 12px 0; padding: 12px 16px; border-radius: 6px; color: #183b2a; background: #e5f5e9; font-weight: 700; }
 @media (max-width: 560px) {
   .football-pitch { grid-template-rows: repeat(3, minmax(74px, auto)); gap: 8px 6px; min-height: 300px; padding: 22px 8px; }
   .pitch-player { gap: 6px; padding: 6px; font-size: .85rem; }

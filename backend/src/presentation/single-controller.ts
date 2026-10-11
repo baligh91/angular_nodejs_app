@@ -100,7 +100,7 @@ export class TeamController {
     await this.scoring.syncUser(req.user);
     const user = await this.db.users.findById(req.user._id);
     if (!user) throw new ServiceUnavailableException('User record unavailable');
-    return this.teams.view(user);
+    return this.teams.view(user, true);
   }
 }
 

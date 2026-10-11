@@ -16,7 +16,7 @@ const managers: Manager[] = Array.from({ length: 20 }, (_, index) => ({
 }));
 const emptyTeam: Team = {
   id: 123456, name: '', leagueName: '', leagueFplId: null, format: 5,
-  managerIds: [], captainId: null, budget: 250, spent: 0, members: [], scores: [], totalScore: 0,
+  managerIds: [], captainId: null, budget: 250, spent: 0, members: [], scores: [], totalScore: 0, seasonScore: 0,
   editsLocked: false, firstScoringGw: null, currentDeadline: null,
 };
 
@@ -89,6 +89,7 @@ describe('single-document FML workflow', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Remove from team');
     expect(fixture.nativeElement.textContent).toContain('Replacement suggestions');
+    expect(fixture.nativeElement.textContent).not.toContain('Félicitations !');
     expect(page.suggestions()).toHaveLength(managers.length - 5);
     expect(fixture.nativeElement.textContent).toContain('Total points');
     expect(fixture.nativeElement.textContent).toContain('Last GW');
@@ -202,30 +203,71 @@ describe('single-document FML workflow', () => {
     http.expectNone((request) => request.method === 'PUT' && request.url === '/api/team');
   });
 
-  it('renders GW scores and season total from the user document', () => {
+  it('congratulates the user when the selected managers exceed the budget', () => {
+    const overBudgetTeam = {
+      ...emptyTeam, name: 'My five', leagueName: 'First league', leagueFplId: 999001,
+      managerIds: managers.slice(0, 5).map((manager) => manager.fplId),
+      captainId: managers[0].fplId, members: managers.slice(0, 5),
+    };
+    const fixture = TestBed.createComponent(TeamEditor);
+    http.expectOne('/api/team').flush(overBudgetTeam);
+    http.expectOne('/api/team/leagues').flush([{ id: 999001, name: 'First league' }]);
+    http.expectOne('/api/team/managers?leagueFplId=999001').flush({
+      leagueFplId: 999001, leagueName: 'First league', managers,
+    });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.budget - fixture.componentInstance.spent()).toBeLessThan(0);
+    expect(fixture.nativeElement.textContent).toContain('Félicitations ! Tu as bien choisi les bons managers.');
+    expect(fixture.nativeElement.textContent).not.toContain('Remaining');
+  });
+
+  it('renders standings ranked by season scores from GW 6 and current GW scores', () => {
     const fixture = TestBed.createComponent(Dashboard);
-    http.expectOne('/api/team').flush({
+    const initialSync = http.expectOne('/api/team/sync');
+    expect(initialSync.request.method).toBe('POST');
+    initialSync.flush({
       ...emptyTeam, name: 'My five', leagueName: 'Public league', leagueFplId: 999001,
-      totalScore: 106, scores: [{ gw: 2, points: 106, total: 106, managerIds: [], captainId: 1, teamName: 'My five', capturedAt: '2026-01-08' }],
+      members: [{
+        ...managers[0], currentGameweek: 8, currentGameweekPoints: 24, totalPoints: 810,
+      }],
+      totalScore: 200, seasonScore: 120,
     });
     http.expectOne('/api/team/standings?leagueFplId=999001').flush([
-      { rank: 1, ownerFplId: 123456, ownerName: 'FPL Manager 123456', teamName: 'Five managers', points: 106 },
-      { rank: 2, ownerFplId: 123458, ownerName: 'FPL Manager 123458', teamName: 'FML Third', points: 80 },
-      { rank: 3, ownerFplId: 123457, ownerName: 'FPL Manager 123457', teamName: 'FML Runner Up', points: 76 },
+      { rank: 1, ownerFplId: 123456, teamName: 'Five managers', gw: 8, gwScore: 24, seasonScore: 120 },
+      { rank: 2, ownerFplId: 123458, teamName: 'FML Third', gw: 8, gwScore: 80, seasonScore: 100 },
+      { rank: 3, ownerFplId: 123457, teamName: 'FML Runner Up', gw: 8, gwScore: 76, seasonScore: 90 },
     ]);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Total season points');
-    expect(fixture.nativeElement.textContent).toContain('GW 2');
+    expect(fixture.nativeElement.textContent).toContain('Season points (GW 6+)');
+    expect(fixture.nativeElement.textContent).toContain('Team name');
+    expect(fixture.nativeElement.textContent).toContain('GW 8 score');
+    expect(fixture.nativeElement.textContent).toContain('Season score (GW 6+)');
+    expect(fixture.nativeElement.textContent).toContain('My managers');
+    expect(fixture.nativeElement.textContent).toContain('Manager 1');
+    expect(fixture.nativeElement.textContent).toContain('GW 8 score');
+    expect(fixture.nativeElement.textContent).toContain('810');
     expect(fixture.nativeElement.textContent).not.toContain('Edit team');
     expect(fixture.nativeElement.querySelector('a[href="/fml/team"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Fantasy team standings');
-    expect(fixture.nativeElement.textContent).toContain('FPL Manager 123456');
     const rankingRows = fixture.nativeElement.querySelectorAll('table')[0].querySelectorAll('tbody tr');
     expect(Array.from(rankingRows, (row: HTMLTableRowElement) =>
       Array.from(row.cells, (cell) => cell.textContent?.trim()))).toEqual([
-      ['1', 'Five managers', 'FPL Manager 123456', '106'],
-      ['2', 'FML Third', 'FPL Manager 123458', '80'],
-      ['3', 'FML Runner Up', 'FPL Manager 123457', '76'],
+      ['1', 'Five managers', '24', '120'],
+      ['2', 'FML Third', '80', '100'],
+      ['3', 'FML Runner Up', '76', '90'],
     ]);
+    fixture.nativeElement.querySelector('button').click();
+    const manualSync = http.expectOne('/api/team/sync');
+    expect(manualSync.request.method).toBe('POST');
+    manualSync.flush({
+      ...emptyTeam, name: 'My five', leagueName: 'Public league', leagueFplId: 999001,
+      members: [{
+        ...managers[0], currentGameweek: 8, currentGameweekPoints: 30, totalPoints: 816,
+      }],
+      totalScore: 220, seasonScore: 50,
+    });
+    http.expectOne('/api/team/standings?leagueFplId=999001').flush([]);
+    expect(fixture.componentInstance.team()?.seasonScore).toBe(50);
+    expect(fixture.componentInstance.team()?.members[0].currentGameweekPoints).toBe(30);
   });
 });

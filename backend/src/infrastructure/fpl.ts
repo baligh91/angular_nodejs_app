@@ -17,6 +17,11 @@ export interface FplProfile {
   id: number; firstName: string; lastName: string; teamName: string;
   leagues: FplLeague[];
 }
+export interface FplManagerScore {
+  currentGameweek: number | null;
+  currentGameweekPoints: number;
+  totalPoints: number;
+}
 
 @Injectable()
 export class FplClient {
@@ -59,6 +64,20 @@ export class FplClient {
       return { id: Number(league.id), name: league.name };
     });
     return { id, firstName: data.player_first_name, lastName: data.player_last_name, teamName: data.name, leagues };
+  }
+
+  async managerScore(id: number): Promise<FplManagerScore> {
+    const data = await this.get<Record<string, unknown>>(`entry/${id}/`);
+    if (data.id !== id || (data.current_event !== null
+      && (!Number.isSafeInteger(data.current_event) || Number(data.current_event) < 1))
+      || !Number.isFinite(data.summary_event_points) || !Number.isFinite(data.summary_overall_points)) {
+      throw new ServiceUnavailableException('Invalid FPL manager score');
+    }
+    return {
+      currentGameweek: data.current_event === null ? null : Number(data.current_event),
+      currentGameweekPoints: Number(data.summary_event_points),
+      totalPoints: Number(data.summary_overall_points),
+    };
   }
 
   async bootstrap(): Promise<FplEvent[]> {

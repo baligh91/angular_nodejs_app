@@ -2,6 +2,7 @@
     <div>
         <p class="eyebrow">FANTASY MANAGER LEAGUE</p>
         <h1>Team statistics</h1>
+        <p>Scores are refreshed when you open this page or select “Refresh scores”.</p>
     </div>
     @if (team()?.leagueFplId) { <button mat-flat-button (click)="sync()" [disabled]="loading()">{{loading() ?
         'Updating…' : 'Refresh scores'}}</button> }
@@ -13,7 +14,7 @@
 <section class="panel stats-grid">
     <div><span>Fantasy team</span><strong>{{squad.name}}</strong></div>
     <div><span>FPL league</span><strong>{{squad.leagueName}}</strong></div>
-    <div><span>Total season points</span><strong>{{squad.totalScore | number}}</strong></div>
+    <div><span>Season points (GW 6+)</span><strong>{{squad.seasonScore | number}}</strong></div>
     <div><span>Scoring starts</span><strong>GW {{squad.firstScoringGw ?? '—'}}</strong></div>
     <div><span>Budget remaining</span><strong>{{(squad.budget - squad.spent) / 10 | number:'1.1-1'}}M</strong></div>
 </section>
@@ -32,17 +33,17 @@
             <thead>
                 <tr>
                     <th scope="col">Pos</th>
-                    <th scope="col">Fantasy team</th>
-                    <th scope="col">Manager</th>
-                    <th scope="col">Points</th>
+                    <th scope="col">Team</th>
+                    <th scope="col">GW {{standings()[0]?.gw ?? '—'}} score</th>
+                    <th scope="col">Season </th>
                 </tr>
             </thead>
             <tbody>@for (row of standings(); track row.ownerFplId) {
                 <tr [class.current-team]="row.ownerFplId === squad.id">
                     <th scope="row">{{row.rank}}</th>
                     <td>{{row.teamName}}</td>
-                    <td>{{row.ownerName}}</td>
-                    <td class="points">{{row.points | number}}</td>
+                    <td>{{row.gwScore | number}}</td>
+                    <td class="points">{{row.seasonScore | number}}</td>
                 </tr>
                 } @empty { <tr>
                     <td colspan="4">No fantasy teams in this league yet.</td>
@@ -53,25 +54,25 @@
     }
 </section>
 <section class="panel">
-    <h2>Gameweek scores</h2>
+    <h2>My managers</h2>
     <div class="table-scroll">
         <table>
-            <caption>Fantasy team score by gameweek</caption>
+            <caption>Individual scores of your selected managers</caption>
             <thead>
                 <tr>
-                    <th scope="col">Gameweek</th>
-                    <th scope="col">GW points</th>
-                    <th scope="col">Season total</th>
+                    <th scope="col">Manager</th>
+                    <th scope="col">GW {{squad.members[0]?.currentGameweek ?? '—'}} score</th>
+                    <th scope="col">Season score</th>
                 </tr>
             </thead>
-            <tbody>@for (score of squad.scores; track score.gw) {
+            <tbody>@for (manager of squad.members; track manager.fplId) {
                 <tr>
-                    <th scope="row">GW {{score.gw}}</th>
-                    <td>{{score.points | number}}</td>
-                    <td>{{score.total | number}}</td>
+                    <th scope="row">{{manager.name}}</th>
+                    <td>{{manager.currentGameweekPoints ?? '—'}}</td>
+                    <td>{{manager.totalPoints | number}}</td>
                 </tr>
                 } @empty { <tr>
-                    <td colspan="3">No completed gameweek scores yet.</td>
+                    <td colspan="3">No managers selected yet.</td>
                 </tr> }
             </tbody>
         </table>

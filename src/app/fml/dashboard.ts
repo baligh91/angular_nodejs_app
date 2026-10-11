@@ -1,5 +1,7 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, inject, signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { finalize } from 'rxjs';
 import { Api } from './services/api.service';
@@ -19,28 +21,20 @@ export class Dashboard {
   readonly standingsFailed = signal(false);
   readonly loading = signal(false);
   readonly failed = signal(false);
-  constructor() { this.load(); }
-  load(): void {
-    this.loading.set(true);
-    this.failed.set(false);
-    this.api.get<Team>('team').pipe(finalize(() => this.loading.set(false))).subscribe({
-        next: team => {
-          this.team.set(team);
-          if (team.leagueFplId) this.loadStandings(team.leagueFplId);
-        },
-        error: () => this.failed.set(true),
-      });
-  }
+  constructor() { this.sync(); }
+  load(): void { this.sync(); }
   sync(): void {
     if (this.loading()) return;
     this.loading.set(true);
+    this.failed.set(false);
     this.api.post<Team>('team/sync', {}).pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: team => {
-        this.team.set(team);
-        if (team.leagueFplId) this.loadStandings(team.leagueFplId);
-      },
+      next: team => this.updateTeam(team),
       error: () => this.failed.set(true),
     });
+  }
+  private updateTeam(team: Team): void {
+    this.team.set(team);
+    if (team.leagueFplId) this.loadStandings(team.leagueFplId);
   }
   private loadStandings(leagueFplId: number): void {
     this.standingsFailed.set(false);

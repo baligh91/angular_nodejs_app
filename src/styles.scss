@@ -149,6 +149,18 @@ thead { background: #edf5ef; color: #375546; font-size: .85rem; }
   .budget-summary strong { font-size: 1.15rem; }
   .fml-app footer { padding: 1.5rem .75rem; }
 }
+@media (max-width: 600px) {
+  .page-heading { gap: .5rem; margin-bottom: 1.25rem; }
+  .page-heading > div { min-width: 0; }
+  .page-heading > button { width: 100%; }
+  .table-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+  .table-scroll table { min-width: 520px; }
+  .table-scroll th,
+  .table-scroll td { padding: .65rem .75rem; font-size: .875rem; }
+  .table-scroll caption { padding-bottom: .5rem; }
+  .replacement-table { max-height: min(70vh, 560px); }
+  .replacement-table table { min-width: 700px; }
+}
 @media (max-width: 360px) {
   .brand { gap: .5rem; font-size: .95rem; }
   .fml-content { padding-right: .5rem; padding-left: .5rem; }

@@ -103,8 +103,13 @@
                 </div>
                 <div class="budget-summary">
                     <div><span>Squad budget</span><strong>25.0M</strong></div>
+                    @if (budget - spent() >= 0) {
                     <div><span>Remaining</span><strong>{{(budget - spent()) / 10 | number:'1.1-1'}}M</strong></div>
+                    }
                 </div>
+                @if (budget - spent() < 0) {
+                <p class="budget-congrats" role="status">Félicitations ! Tu as bien choisi les bons managers.</p>
+                }
                 <div class="captain-picker"><mat-form-field><mat-label>Captain (double points)</mat-label><mat-select
                             [value]="captainId()" [disabled]="editsLocked()"
                             (selectionChange)="captainId.set($event.value)">@for (manager of selected(); track

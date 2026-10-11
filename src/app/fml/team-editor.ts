@@ -8,7 +8,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { finalize, forkJoin } from 'rxjs';
 import { Api } from './services/api.service';
-import { Notices } from './services/notices.service';
 import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost } from './models';
 
 @Component({
@@ -20,7 +19,6 @@ import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost } fro
 })
 export class TeamEditor {
   private readonly api = inject(Api);
-  private readonly notices = inject(Notices);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
@@ -213,7 +211,6 @@ export class TeamEditor {
     };
     this.api.put<Team>('team', body).pipe(finalize(() => this.busy.set(false))).subscribe({
       next: (team) => {
-        this.notices.message.set('Your team was saved.');
         this.team.set(team);
         this.scheduleDeadlineLock(team.currentDeadline);
         void this.router.navigate(['/fml']);

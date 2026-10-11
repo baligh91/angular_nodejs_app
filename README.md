@@ -19,7 +19,7 @@ Sur `/fml/connect`, créer un compte avec l’ID FPL et un mot de passe d’au m
 
 Dans « My team », les ligues classiques publiques de l’utilisateur sont chargées depuis son profil FPL; la ligue actuelle est présélectionnée, sinon la première ligue disponible. Ses managers sont chargés automatiquement. Choisir exactement cinq managers, un capitaine et un nom d’équipe. Le coût est calculé depuis le rang FPL avec le budget de 25M.
 
-Les scores sont la somme des points GW FPL des cinq managers; le capitaine compte double. Avant chaque deadline, le roster et le capitaine sont figés comme snapshot. Chaque score GW, son roster source et le cumul restent dans le même document Mongo. Le bouton « Update scores » synchronise les GW finalisées et prépare les snapshots futurs; le backend effectue aussi une synchronisation horaire.
+Les scores sont la somme des points GW FPL des cinq managers; le capitaine compte double. Avant chaque deadline, le roster et le capitaine sont figés comme snapshot. Chaque score GW, son roster source et le cumul restent dans le même document Mongo. À l’ouverture du dashboard ou au clic sur « Refresh scores », l’application récupère les points de la gameweek en cours pour chaque manager ainsi que les GW finalisées de l’équipe, et prépare les snapshots futurs. Le classement des équipes affiche le score de la GW en cours et le cumul des scores des GW 6 et suivantes, score de la GW en cours inclus dès la GW 6; il est trié par ce cumul décroissant.
 
 ## Lancement local
 
@@ -51,10 +51,9 @@ Importer le dépôt GitHub dans Vercel en utilisant sa racine comme répertoire 
 
 - `MONGODB_URI` : URI MongoDB Atlas ou autre MongoDB accessible depuis Vercel.
 - `JWT_SECRET` : secret aléatoire d’au moins 32 caractères.
-- `CRON_SECRET` : secret aléatoire utilisé pour autoriser la synchronisation horaire.
 - `APP_ORIGIN` : URL HTTPS exacte du déploiement de production, sans slash final.
 
-Le cron Vercel appelle `/api/cron/sync` chaque jour à 00:00 UTC (compatible avec l’offre Hobby); le secret `CRON_SECRET` est envoyé dans son en-tête Bearer. La synchronisation manuelle reste disponible entre deux passages. Ne pas copier `.env` dans le dépôt : seuls les noms de variables et exemples non secrets sont versionnés.
+Vercel n’exécute pas de cron : la synchronisation des scores est lancée à l’ouverture du dashboard ou manuellement avec « Refresh scores ». Ne pas copier `.env` dans le dépôt : seuls les noms de variables et exemples non secrets sont versionnés.
 
 Le login par mot de passe n’inclut pas encore de preuve de propriété de l’ID FPL. Voir la limite décrite dans « Connexion » avant de rendre le site public.
 
