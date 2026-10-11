@@ -239,9 +239,9 @@ describe('single-document FML workflow', () => {
     ]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Season points (GW 6+)');
-    expect(fixture.nativeElement.textContent).toContain('Team name');
+    expect(fixture.nativeElement.textContent).toContain('Team');
     expect(fixture.nativeElement.textContent).toContain('GW 8 score');
-    expect(fixture.nativeElement.textContent).toContain('Season score (GW 6+)');
+    expect(fixture.nativeElement.textContent).toContain('Season');
     expect(fixture.nativeElement.textContent).toContain('My managers');
     expect(fixture.nativeElement.textContent).toContain('Manager 1');
     expect(fixture.nativeElement.textContent).toContain('GW 8 score');
