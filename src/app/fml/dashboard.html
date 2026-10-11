@@ -27,15 +27,20 @@
     </div>
     @if (standingsFailed()) { <p role="alert">Could not load the league table.</p> }
     @if (!standingsFailed()) {
-    <div class="table-scroll">
-        <table>
+    <div class="table-scroll rounded-md">
+        <table
+            class="w-full table-auto text-[0.7rem] leading-tight sm:text-sm
+                [&_th]:whitespace-normal [&_td]:whitespace-normal
+                [&_th]:break-words [&_td]:break-words
+                [&_th]:px-1 [&_td]:px-1 [&_th]:py-2 [&_td]:py-2
+                sm:[&_th]:px-2 sm:[&_td]:px-2">
             <caption>Teams in {{squad.leagueName}}</caption>
             <thead>
                 <tr>
-                    <th scope="col">Pos</th>
-                    <th scope="col">Team</th>
-                    <th scope="col">GW {{standings()[0]?.gw ?? '—'}} score</th>
-                    <th scope="col">Season </th>
+                    <th scope="col" class="w-[12%]">Pos</th>
+                    <th scope="col" class="w-[38%]">Team</th>
+                    <th scope="col" class="w-1/4">GW {{standings()[0]?.gw ?? '—'}} score</th>
+                    <th scope="col" class="w-1/4">Season</th>
                 </tr>
             </thead>
             <tbody>@for (row of standings(); track row.ownerFplId) {
@@ -55,14 +60,19 @@
 </section>
 <section class="panel">
     <h2>My managers</h2>
-    <div class="table-scroll">
-        <table>
+    <div class="table-scroll rounded-md">
+        <table
+            class="w-full table-auto text-[0.7rem] leading-tight sm:text-sm
+                [&_th]:whitespace-normal [&_td]:whitespace-normal
+                [&_th]:break-words [&_td]:break-words
+                [&_th]:px-1 [&_td]:px-1 [&_th]:py-2 [&_td]:py-2
+                sm:[&_th]:px-2 sm:[&_td]:px-2">
             <caption>Individual scores of your selected managers</caption>
             <thead>
                 <tr>
-                    <th scope="col">Manager</th>
-                    <th scope="col">GW {{squad.members[0]?.currentGameweek ?? '—'}} score</th>
-                    <th scope="col">Season score</th>
+                    <th scope="col" class="w-[40%]">Manager</th>
+                    <th scope="col" class="w-[30%]">GW {{squad.members[0]?.currentGameweek ?? '—'}} score</th>
+                    <th scope="col" class="w-[30%]">Season score</th>
                 </tr>
             </thead>
             <tbody>@for (manager of squad.members; track manager.fplId) {

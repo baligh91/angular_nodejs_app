@@ -24,15 +24,6 @@
 	font-weight: 700;
 }
 
-.table-scroll th,
-.table-scroll td {
-	padding: .55rem .7rem;
-}
-
-.table-scroll thead th {
-	font-size: .78rem;
-}
-
 @media (max-width: 600px) {
 	.stats-grid > div {
 		padding: 10px 8px;
@@ -42,14 +33,5 @@
 
 	.stats-grid > div:first-child {
 		border-top: 0;
-	}
-
-	.table-scroll th,
-	.table-scroll td {
-		padding: .45rem .55rem;
-	}
-
-	.table-scroll thead th {
-		font-size: .72rem;
 	}
 }
