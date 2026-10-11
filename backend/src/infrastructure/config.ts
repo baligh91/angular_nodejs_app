@@ -13,6 +13,9 @@ export class Config {
         ? `https://${process.env.VERCEL_URL}`
         : 'http://localhost:4200'
   );
+  readonly allowedOrigins = this.production
+    ? [this.origin]
+    : [...new Set([this.origin, 'http://localhost:4200', 'http://127.0.0.1:4200'])];
   readonly cronSecret = process.env.CRON_SECRET || '';
   readonly cookieSecure = process.env.COOKIE_SECURE === 'true' || this.production;
   readonly syncEnabled = process.env.SYNC_ENABLED !== 'false';

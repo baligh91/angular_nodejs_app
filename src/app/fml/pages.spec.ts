@@ -227,25 +227,26 @@ describe('single-document FML workflow', () => {
     expect(initialSync.request.method).toBe('POST');
     initialSync.flush({
       ...emptyTeam, name: 'My five', leagueName: 'Public league', leagueFplId: 999001,
+      captainId: managers[0].fplId,
       members: [{
         ...managers[0], currentGameweek: 8, currentGameweekPoints: 24, totalPoints: 810,
       }],
       totalScore: 200, seasonScore: 120,
     });
     http.expectOne('/api/team/standings?leagueFplId=999001').flush([
-      { rank: 1, ownerFplId: 123456, teamName: 'Five managers', gw: 8, gwScore: 24, seasonScore: 120 },
-      { rank: 2, ownerFplId: 123458, teamName: 'FML Third', gw: 8, gwScore: 80, seasonScore: 100 },
-      { rank: 3, ownerFplId: 123457, teamName: 'FML Runner Up', gw: 8, gwScore: 76, seasonScore: 90 },
+      { rank: 1, ownerFplId: 123456, ownerName: 'My manager', teamName: 'Five managers', gw: 8, gwScore: 24, seasonScore: 120 },
+      { rank: 2, ownerFplId: 123458, ownerName: 'Third manager', teamName: 'FML Third', gw: 8, gwScore: 80, seasonScore: 100 },
+      { rank: 3, ownerFplId: 123457, ownerName: 'Runner up', teamName: 'FML Runner Up', gw: 8, gwScore: 76, seasonScore: 90 },
     ]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Season points (GW 6+)');
     expect(fixture.nativeElement.textContent).toContain('Team');
-    expect(fixture.nativeElement.textContent).toContain('GW 8 score');
+    expect(fixture.nativeElement.textContent).toContain('GW 8');
     expect(fixture.nativeElement.textContent).toContain('Season');
     expect(fixture.nativeElement.textContent).toContain('My managers');
     expect(fixture.nativeElement.textContent).toContain('Manager 1');
-    expect(fixture.nativeElement.textContent).toContain('GW 8 score');
-    expect(fixture.nativeElement.textContent).toContain('810');
+    expect(fixture.nativeElement.textContent).toContain('GW 8');
+    expect(fixture.nativeElement.textContent).toContain('Rang FPL');
     expect(fixture.nativeElement.textContent).not.toContain('Edit team');
     expect(fixture.nativeElement.querySelector('a[href="/fml/team"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Fantasy team standings');
@@ -256,6 +257,37 @@ describe('single-document FML workflow', () => {
       ['2', 'FML Third', '80', '100'],
       ['3', 'FML Runner Up', '76', '90'],
     ]);
+    fixture.nativeElement.querySelectorAll('.manager-select')[1].click();
+    const leagueTeamRequest = http.expectOne(
+      '/api/team/league-team?leagueFplId=999001&ownerFplId=123458',
+    );
+    leagueTeamRequest.flush({
+      ownerFplId: 123458, ownerName: 'Third manager', teamName: 'FML Third',
+      captainId: 90000001,
+      managers: [
+        { ...managers[0], price: 35, currentGameweekPoints: 18 },
+        { ...managers[1], price: 30, currentGameweekPoints: 22 },
+      ],
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Team de manager Third manager');
+    expect(fixture.nativeElement.textContent).toContain('Managers sélectionnés par Third manager');
+    expect(fixture.nativeElement.textContent).toContain('Manager 1');
+    expect(fixture.nativeElement.textContent).toContain('18');
+    expect(fixture.nativeElement.textContent).not.toContain('Prix');
+    expect(fixture.nativeElement.textContent).not.toContain('Rôle');
+    expect(fixture.nativeElement.textContent).not.toContain('810');
+    const otherManagersRow = fixture.nativeElement.querySelectorAll('.managers-table tbody tr')[0] as HTMLTableRowElement;
+    expect(Array.from(otherManagersRow.cells, (cell: HTMLTableCellElement) => cell.textContent?.trim()))
+      .toEqual(['C Manager 1', '1', '18']);
+    fixture.nativeElement.querySelectorAll('.manager-select')[0].click();
+    http.expectNone('/api/team/league-team?leagueFplId=999001&ownerFplId=123456');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('My managers');
+    expect(fixture.nativeElement.textContent).toContain('C');
+    const ownManagersRow = fixture.nativeElement.querySelectorAll('.managers-table tbody tr')[0] as HTMLTableRowElement;
+    expect(Array.from(ownManagersRow.cells, (cell: HTMLTableCellElement) => cell.textContent?.trim()))
+      .toEqual(['C Manager 1', '1', '24']);
     fixture.nativeElement.querySelector('button').click();
     const manualSync = http.expectOne('/api/team/sync');
     expect(manualSync.request.method).toBe('POST');

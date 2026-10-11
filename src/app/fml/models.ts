@@ -23,7 +23,7 @@ export interface Manager {
   form: number;
   price: number;
   currentGameweek?: number | null;
-  currentGameweekPoints?: number;
+  currentGameweekPoints?: number | null;
   priceHistory?: { gw: number; price: number; delta: number }[];
 }
 export type Format = 5;
@@ -64,10 +64,18 @@ export interface ManagerLeague { leagueFplId: number; leagueName: string; manage
 export interface TeamStanding {
   rank: number;
   ownerFplId: number;
+  ownerName: string;
   teamName: string;
   gw: number | null;
   gwScore: number;
   seasonScore: number;
+}
+export interface LeagueTeam {
+  ownerFplId: number;
+  ownerName: string;
+  teamName: string;
+  captainId: number;
+  managers: Manager[];
 }
 export const BUDGETS: Record<5, number> = { 5: 250 };
 export function selectionCost(managers: readonly Manager[]): number {

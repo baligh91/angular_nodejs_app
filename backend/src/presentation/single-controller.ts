@@ -11,7 +11,9 @@ import { TeamService } from '../application/team';
 import { ScoringService } from '../application/scoring';
 import { Database, User } from '../infrastructure/database';
 import { Config } from '../infrastructure/config';
-import { FplLoginDto, FplRegisterDto, ManagerLeagueQueryDto, TeamDto } from './single-dto';
+import {
+  FplLoginDto, FplRegisterDto, LeagueTeamQueryDto, ManagerLeagueQueryDto, TeamDto,
+} from './single-dto';
 
 type AuthRequest = Request & { user: User };
 
@@ -22,7 +24,7 @@ export class AuthController {
 
   private origin(req: Request) {
     const origin = req.headers.origin;
-    if ((origin && origin !== this.config.origin)
+    if ((origin && !this.config.allowedOrigins.includes(origin))
       || (!origin && req.headers['sec-fetch-site'] === 'cross-site')) {
       throw new ForbiddenException('Untrusted request origin');
     }
@@ -82,6 +84,11 @@ export class TeamController {
 
   @Get('managers')
   managers(@Query() query: ManagerLeagueQueryDto) { return this.teams.managers(query.leagueFplId); }
+
+  @Get('league-team')
+  leagueTeam(@Query() query: LeagueTeamQueryDto) {
+    return this.teams.leagueTeam(query.leagueFplId, query.ownerFplId);
+  }
 
   @Get('standings')
   standings(@Query() query: ManagerLeagueQueryDto) { return this.teams.standings(query.leagueFplId); }

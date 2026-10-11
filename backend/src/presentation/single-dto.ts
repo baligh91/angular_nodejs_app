@@ -21,6 +21,13 @@ export class ManagerLeagueQueryDto {
   @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) leagueFplId!: number;
 }
 
+export class LeagueTeamQueryDto {
+  @ApiProperty() @Transform(({ value }) => Number(value))
+  @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) leagueFplId!: number;
+  @ApiProperty() @Transform(({ value }) => Number(value))
+  @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) ownerFplId!: number;
+}
+
 export class TeamDto {
   @ApiProperty() @IsString() @Length(2, 60)
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)

@@ -3,9 +3,9 @@ import {
   ChangeDetectionStrategy, Component, inject, signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { Api } from './services/api.service';
-import { Team, TeamStanding } from './models';
+import { LeagueTeam, Team, TeamStanding } from './models';
 
 @Component({
   selector: 'app-dashboard',
@@ -21,6 +21,11 @@ export class Dashboard {
   readonly standingsFailed = signal(false);
   readonly loading = signal(false);
   readonly failed = signal(false);
+  readonly selectedStanding = signal<TeamStanding | null>(null);
+  readonly selectedLeagueTeam = signal<LeagueTeam | null>(null);
+  readonly leagueTeamLoading = signal(false);
+  readonly leagueTeamFailed = signal(false);
+  private leagueTeamRequest?: Subscription;
   constructor() { this.sync(); }
   load(): void { this.sync(); }
   sync(): void {
@@ -42,5 +47,25 @@ export class Dashboard {
       next: standings => this.standings.set(standings),
       error: () => this.standingsFailed.set(true),
     });
+  }
+  selectLeagueTeam(row: TeamStanding, leagueFplId: number): void {
+    this.leagueTeamRequest?.unsubscribe();
+    this.selectedStanding.set(row);
+    this.selectedLeagueTeam.set(null);
+    this.leagueTeamFailed.set(false);
+    if (row.ownerFplId === this.team()?.id) {
+      this.leagueTeamLoading.set(false);
+      return;
+    }
+    this.leagueTeamLoading.set(true);
+    this.leagueTeamRequest = this.api
+      .get<LeagueTeam>(
+        `team/league-team?leagueFplId=${encodeURIComponent(leagueFplId)}&ownerFplId=${encodeURIComponent(row.ownerFplId)}`,
+      )
+      .pipe(finalize(() => this.leagueTeamLoading.set(false)))
+      .subscribe({
+        next: fantasyTeam => this.selectedLeagueTeam.set(fantasyTeam),
+        error: () => this.leagueTeamFailed.set(true),
+      });
   }
 }

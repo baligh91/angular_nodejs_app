@@ -9,7 +9,7 @@ export function configureApp(app: INestApplication) {
   app.setGlobalPrefix('api');
   app.use(helmet());
   app.use(cookieParser());
-  app.enableCors({ origin: config.origin, credentials: true });
+  app.enableCors({ origin: config.allowedOrigins, credentials: true });
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true, forbidNonWhitelisted: true, transform: true,
   }));

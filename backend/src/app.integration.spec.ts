@@ -85,6 +85,21 @@ describe('single-document FML API', () => {
     expect(saved.body).toMatchObject({ format: 5, spent: 97, members: expect.any(Array), totalScore: 0 });
     expect(saved.body.members).toHaveLength(5);
     expect(saved.body.firstScoringGw).toBe(2);
+    const leagueTeam = await request(app.getHttpServer())
+      .get('/api/team/league-team?leagueFplId=999001&ownerFplId=72021')
+      .set('Authorization', `Bearer ${token}`).expect(200);
+    expect(leagueTeam.body).toMatchObject({
+      ownerFplId: 72021, teamName: 'Five managers', captainId: managerIds[0],
+      managers: expect.arrayContaining([
+        expect.objectContaining({
+          fplId: managerIds[0], name: 'Manager 16', rank: 16, currentGameweekPoints: 6,
+        }),
+      ]),
+    });
+    expect(leagueTeam.body.managers).toHaveLength(5);
+    await request(app.getHttpServer())
+      .get('/api/team/league-team?leagueFplId=999002&ownerFplId=72021')
+      .set('Authorization', `Bearer ${token}`).expect(404);
 
     const sharedManagers = [90000011, 90000012, 90000013, 90000014, 90000015];
     const secondLogin = await request(app.getHttpServer()).post('/api/auth/register')

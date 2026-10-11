@@ -55,6 +55,36 @@ export class TeamService {
     };
   }
 
+  async leagueTeam(leagueFplId: number, ownerFplId: number) {
+    const user = await this.db.users.findOne({
+      fplId: ownerFplId, 'team.leagueFplId': leagueFplId, disabled: false,
+    }).lean();
+    if (!user?.team) throw new NotFoundException('Fantasy team not found in this league');
+    const events = await this.fpl.bootstrap();
+    const current = events.find((event) => event.is_current && !event.finished);
+    const managerScores = current
+      ? await Promise.all(user.team.managers.map(async (manager) => [
+        manager.fplId, await this.fpl.managerScore(manager.fplId),
+      ] as const))
+      : [];
+    const scoresByManager = new Map(managerScores);
+    return {
+      ownerFplId: user.fplId,
+      ownerName: `${user.firstName} ${user.lastName}`.trim(),
+      teamName: user.team.name,
+      captainId: user.team.captainId,
+      managers: user.team.managers.map((manager) => {
+        const score = scoresByManager.get(manager.fplId);
+        return {
+          ...manager,
+          currentGameweekPoints: current && score?.currentGameweek === current.id
+            ? score.currentGameweekPoints
+            : null,
+        };
+      }),
+    };
+  }
+
   async standings(leagueFplId: number) {
     const users = await this.db.users.find({ 'team.leagueFplId': leagueFplId, disabled: false }).lean();
     const events = await this.fpl.bootstrap();

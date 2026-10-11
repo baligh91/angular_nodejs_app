@@ -13,5 +13,7 @@ describe('backend configuration', () => {
     expect(config.port).toBe(3000);
     expect(config.mongoUri).toBe('mongodb://127.0.0.1:27017/fml');
     expect(config.origin).toBe('http://localhost:4200');
+    expect(config.allowedOrigins).toContain('http://localhost:4200');
+    expect(config.allowedOrigins).toContain('http://127.0.0.1:4200');
   });
 });

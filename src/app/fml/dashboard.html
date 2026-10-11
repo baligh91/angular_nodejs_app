@@ -23,35 +23,36 @@
         <div>
             <p class="eyebrow">LEAGUE TABLE</p>
             <h2>Fantasy team standings</h2>
+            <p>Select a team name to see the five managers chosen in this app.</p>
         </div>
     </div>
     @if (standingsFailed()) { <p role="alert">Could not load the league table.</p> }
     @if (!standingsFailed()) {
-    <div class="table-scroll rounded-md">
-        <table
-            class="w-full table-auto text-[0.7rem] leading-tight sm:text-sm
-                [&_th]:whitespace-normal [&_td]:whitespace-normal
-                [&_th]:break-words [&_td]:break-words
-                [&_th]:px-1 [&_td]:px-1 [&_th]:py-2 [&_td]:py-2
-                sm:[&_th]:px-2 sm:[&_td]:px-2">
+    <div class="table-scroll fpl-table-scroll">
+        <table class="fpl-table standings-table">
             <caption>Teams in {{squad.leagueName}}</caption>
             <thead>
                 <tr>
-                    <th scope="col" class="w-[12%]">Pos</th>
-                    <th scope="col" class="w-[38%]">Team</th>
-                    <th scope="col" class="w-1/4">GW {{standings()[0]?.gw ?? '—'}} score</th>
-                    <th scope="col" class="w-1/4">Season</th>
+                    <th scope="col" class="rank-column">Rank</th>
+                    <th scope="col" class="team-column">Team</th>
+                    <th scope="col" class="numeric-column gw-column">GW {{standings()[0]?.gw ?? '—'}}</th>
+                    <th scope="col" class="numeric-column total-column">Total</th>
                 </tr>
             </thead>
             <tbody>@for (row of standings(); track row.ownerFplId) {
-                <tr [class.current-team]="row.ownerFplId === squad.id">
-                    <th scope="row">{{row.rank}}</th>
-                    <td>{{row.teamName}}</td>
-                    <td>{{row.gwScore | number}}</td>
-                    <td class="points">{{row.seasonScore | number}}</td>
+                <tr [class.current-team]="row.ownerFplId === squad.id"
+                    [class.selected-manager]="selectedStanding()?.ownerFplId === row.ownerFplId">
+                    <th scope="row" class="rank-cell"><span class="rank-badge">{{row.rank}}</span></th>
+                    <td class="team-cell">
+                        <button type="button" class="manager-select"
+                            [attr.aria-pressed]="selectedStanding()?.ownerFplId === row.ownerFplId"
+                            (click)="selectLeagueTeam(row, squad.leagueFplId!)">{{row.teamName}}</button>
+                    </td>
+                    <td class="numeric-cell gw-cell">{{row.gwScore | number}}</td>
+                    <td class="numeric-cell total-cell">{{row.seasonScore | number}}</td>
                 </tr>
                 } @empty { <tr>
-                    <td colspan="4">No fantasy teams in this league yet.</td>
+                    <td colspan="4" class="empty-cell">No fantasy teams in this league yet.</td>
                 </tr> }
             </tbody>
         </table>
@@ -59,31 +60,61 @@
     }
 </section>
 <section class="panel">
+    @if (selectedStanding() && selectedStanding()?.ownerFplId !== squad.id) {
+    <h2>Team de manager {{selectedStanding()?.ownerName}}</h2>
+    } @else {
     <h2>My managers</h2>
-    <div class="table-scroll rounded-md">
-        <table
-            class="w-full table-auto text-[0.7rem] leading-tight sm:text-sm
-                [&_th]:whitespace-normal [&_td]:whitespace-normal
-                [&_th]:break-words [&_td]:break-words
-                [&_th]:px-1 [&_td]:px-1 [&_th]:py-2 [&_td]:py-2
-                sm:[&_th]:px-2 sm:[&_td]:px-2">
+    }
+    @if (selectedStanding() && selectedStanding()?.ownerFplId !== squad.id && leagueTeamLoading()) {
+    <p role="status">Chargement de l’équipe…</p>
+    }
+    @if (selectedStanding() && selectedStanding()?.ownerFplId !== squad.id && leagueTeamFailed()) {
+    <p role="alert">Impossible de charger l’équipe de ce manager.</p>
+    }
+    <div class="table-scroll fpl-table-scroll">
+        <table class="fpl-table managers-table">
+            @if (selectedStanding() && selectedStanding()?.ownerFplId !== squad.id) {
+            <caption>Managers sélectionnés par {{selectedStanding()?.ownerName}}</caption>
+            } @else {
             <caption>Individual scores of your selected managers</caption>
+            }
             <thead>
                 <tr>
-                    <th scope="col" class="w-[40%]">Manager</th>
-                    <th scope="col" class="w-[30%]">GW {{squad.members[0]?.currentGameweek ?? '—'}} score</th>
-                    <th scope="col" class="w-[30%]">Season score</th>
+                    <th scope="col" class="manager-column">Manager</th>
+                    <th scope="col" class="numeric-column">Rang FPL</th>
+                    <th scope="col" class="numeric-column">GW {{selectedStanding()?.gw ?? squad.members[0]?.currentGameweek ?? '—'}} points</th>
                 </tr>
             </thead>
-            <tbody>@for (manager of squad.members; track manager.fplId) {
+            <tbody>
+                @if (selectedStanding() && selectedStanding()?.ownerFplId !== squad.id) {
+                @if (selectedLeagueTeam(); as fantasyTeam) {
+                @for (manager of fantasyTeam.managers; track manager.fplId) {
                 <tr>
-                    <th scope="row">{{manager.name}}</th>
-                    <td>{{manager.currentGameweekPoints ?? '—'}}</td>
-                    <td>{{manager.totalPoints | number}}</td>
+                    <th scope="row" class="manager-cell">
+                        @if (manager.fplId === fantasyTeam.captainId) { <span class="captain-badge" aria-label="Capitaine">C</span> }
+                        {{manager.name}}
+                    </th>
+                    <td class="numeric-cell">{{manager.rank}}</td>
+                    <td class="numeric-cell">{{manager.currentGameweekPoints ?? '—'}}</td>
                 </tr>
-                } @empty { <tr>
-                    <td colspan="3">No managers selected yet.</td>
-                </tr> }
+                } @empty {
+                <tr><td colspan="3" class="empty-cell">Aucun manager dans cette équipe.</td></tr>
+                }
+                }
+                } @else {
+                @for (manager of squad.members; track manager.fplId) {
+                <tr>
+                    <th scope="row" class="manager-cell">
+                        @if (manager.fplId === squad.captainId) { <span class="captain-badge" aria-label="Capitaine">C</span> }
+                        {{manager.name}}
+                    </th>
+                    <td class="numeric-cell">{{manager.rank}}</td>
+                    <td class="numeric-cell">{{manager.currentGameweekPoints ?? '—'}}</td>
+                </tr>
+                } @empty {
+                <tr><td colspan="3" class="empty-cell">No managers selected yet.</td></tr>
+                }
+                }
             </tbody>
         </table>
     </div>
