@@ -82,7 +82,8 @@
                 <tr>
                     <th scope="col" class="manager-column">Manager</th>
                     <th scope="col" class="numeric-column">Rang FPL</th>
-                    <th scope="col" class="numeric-column">GW {{selectedStanding()?.gw ?? squad.members[0]?.currentGameweek ?? '—'}} points</th>
+                    <th scope="col" class="numeric-column">GW {{selectedStanding()?.gw ??
+                        squad.members[0]?.currentGameweek ?? '—'}} points</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,28 +92,34 @@
                 @for (manager of fantasyTeam.managers; track manager.fplId) {
                 <tr>
                     <th scope="row" class="manager-cell">
-                        @if (manager.fplId === fantasyTeam.captainId) { <span class="captain-badge" aria-label="Capitaine">C</span> }
+                        @if (manager.fplId === fantasyTeam.captainId) { <span class="captain-badge"
+                            aria-label="Capitaine">C</span> }
                         {{manager.name}}
                     </th>
                     <td class="numeric-cell">{{manager.rank}}</td>
                     <td class="numeric-cell">{{manager.currentGameweekPoints ?? '—'}}</td>
                 </tr>
                 } @empty {
-                <tr><td colspan="3" class="empty-cell">Aucun manager dans cette équipe.</td></tr>
+                <tr>
+                    <td colspan="3" class="empty-cell">Aucun manager dans cette équipe.</td>
+                </tr>
                 }
                 }
                 } @else {
                 @for (manager of squad.members; track manager.fplId) {
                 <tr>
                     <th scope="row" class="manager-cell">
-                        @if (manager.fplId === squad.captainId) { <span class="captain-badge" aria-label="Capitaine">C</span> }
+                        @if (manager.fplId === squad.captainId) { <span class="captain-badge"
+                            aria-label="Capitaine">C</span> }
                         {{manager.name}}
                     </th>
                     <td class="numeric-cell">{{manager.rank}}</td>
                     <td class="numeric-cell">{{manager.currentGameweekPoints ?? '—'}}</td>
                 </tr>
                 } @empty {
-                <tr><td colspan="3" class="empty-cell">No managers selected yet.</td></tr>
+                <tr>
+                    <td colspan="3" class="empty-cell">No managers selected yet.</td>
+                </tr>
                 }
                 }
             </tbody>
