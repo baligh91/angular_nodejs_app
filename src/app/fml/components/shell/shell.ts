@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { Auth } from '../services/auth.service';
-import { Notices } from '../services/notices.service';
+import { Auth } from '../../services/auth.service';
+import { Notices } from '../../services/notices.service';
 
 @Component({
   selector: 'app-fml-shell',

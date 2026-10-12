@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { finalize } from 'rxjs';
-import { Auth } from '../services/auth.service';
+import { Auth } from '../../services/auth.service';
 
 @Component({
   selector: 'app-fpl-connect',

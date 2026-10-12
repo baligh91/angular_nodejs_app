@@ -1,0 +1,27 @@
+{
+  "planHash": "2d4826c2ef9ad8453525b9942bd4732f06eb5175d1d9254b498873aec00bca49",
+  "phase": "baseline",
+  "recordedAtUtc": "2026-10-12T09:13:43.4493131Z",
+  "retryCount": 0,
+  "resetBaseline": true,
+  "complete": true,
+  "result": {
+    "setupSucceeded": false,
+    "setupDurationMs": 1369,
+    "setupFailureOutput": "setup step 0 \u0027npm\u0027 failed (exit=1, timedOut=False)\r\nnpm error code EUSAGE\r\nnpm error\r\nnpm error \u0060npm ci\u0060 can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with \u0060npm install\u0060 before continuing.\r\nnpm error\r\nnpm error Missing: @emnapi/core@1.11.3 from lock file\r\nnpm error Missing: @emnapi/runtime@1.11.3 from lock file\r\nnpm error Missing: @emnapi/wasi-threads@1.2.3 from lock file\r\nnpm error\r\nnpm error Clean install a project\r\nnpm error\r\nnpm error Usage:\r\nnpm error npm ci\r\nnpm error\r\nnpm error Options:\r\nnpm error [--install-strategy \u003Choisted|nested|shallow|linked\u003E] [--legacy-bundling]\r\nnpm error [--global-style] [--omit \u003Cdev|optional|peer\u003E [--omit \u003Cdev|optional|peer\u003E ...]]\r\nnpm error [--include \u003Cprod|dev|optional|peer\u003E [--include \u003Cprod|dev|optional|peer\u003E ...]]\r\nnpm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]\r\nnpm error [--no-bin-links] [--no-fund] [--dry-run]\r\nnpm error [-w|--workspace \u003Cworkspace-name\u003E [-w|--workspace \u003Cworkspace-name\u003E ...]]\r\nnpm error [-ws|--workspaces] [--include-workspace-root] [--install-links]\r\nnpm error\r\nnpm error aliases: clean-install, ic, install-clean, isntall-clean\r\nnpm error\r\nnpm error Run \u0022npm help ci\u0022 for more info\r\nnpm error A complete log of this run can be found in: C:\\Users\\baligh.azouzi\\AppData\\Local\\npm-cache\\_logs\\2026-10-12T09_13_42_542Z-debug-0.log\r\n",
+    "assertions": [],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Users\\baligh.azouzi\\Downloads\\node-v22.22.3-win-x64\\node-v22.22.3-win-x64\\npm.CMD",
+        "args": [
+          "ci"
+        ],
+        "cwd": "c:\\work_space\\fml-project\\angular_nodejs_app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

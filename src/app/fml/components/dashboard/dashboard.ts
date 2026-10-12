@@ -4,8 +4,8 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { finalize, Subscription } from 'rxjs';
-import { Api } from '../services/api.service';
-import { LeagueTeam, Team, TeamStanding } from '../models';
+import { Api } from '../../services/api.service';
+import { LeagueTeam, Team, TeamStanding } from '../../models';
 
 @Component({
   selector: 'app-dashboard',

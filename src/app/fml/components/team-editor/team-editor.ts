@@ -7,8 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { finalize, forkJoin } from 'rxjs';
-import { Api } from '../services/api.service';
-import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost } from '../models';
+import { Api } from '../../services/api.service';
+import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost } from '../../models';
 
 @Component({
   selector: 'app-team-editor',
