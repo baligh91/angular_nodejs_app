@@ -28,6 +28,10 @@
 	table-layout: fixed;
 }
 
+.standings-table .standing-row {
+	cursor: pointer;
+}
+
 .standings-table .rank-column,
 .standings-table .rank-cell {
 	width: 12%;

@@ -38,13 +38,13 @@
                 </tr>
             </thead>
             <tbody>@for (row of standings(); track row.ownerFplId) {
-                <tr [class.current-team]="row.ownerFplId === squad.id"
-                    [class.selected-manager]="selectedStanding()?.ownerFplId === row.ownerFplId">
+                <tr class="standing-row" [class.current-team]="row.ownerFplId === squad.id"
+                    [class.selected-manager]="selectedStanding()?.ownerFplId === row.ownerFplId"
+                    (click)="selectLeagueTeam(row, squad.leagueFplId!)">
                     <th scope="row" class="rank-cell"><span class="rank-badge">{{row.rank}}</span></th>
                     <td class="team-cell">
                         <button type="button" class="manager-select"
-                            [attr.aria-pressed]="selectedStanding()?.ownerFplId === row.ownerFplId"
-                            (click)="selectLeagueTeam(row, squad.leagueFplId!)">{{row.teamName}}</button>
+                            [attr.aria-pressed]="selectedStanding()?.ownerFplId === row.ownerFplId">{{row.teamName}}</button>
                     </td>
                     <td class="numeric-cell gw-cell">{{row.gwScore | number}}</td>
                     <td class="numeric-cell total-cell">{{row.seasonScore | number}}</td>
