@@ -53,7 +53,7 @@ MongoDB standalone suffit : les opérations ne dépendent plus de transactions m
 
 ## Synchronisation en production
 
-Vercel appelle `/api/cron/sync` chaque heure pour capturer les rosters avant les deadlines et calculer les scores des GW terminees. Configurer `CRON_SECRET` dans les variables d'environnement de production Vercel ; Vercel l'envoie comme bearer token au cron. Les GW deja terminees sans snapshot de roster ne peuvent pas etre reconstruites de facon fiable a partir de l'equipe actuelle.
+Vercel appelle `/api/cron/sync` une fois par jour (`0 0 * * *`, UTC), pour rester compatible avec le forfait Hobby et calculer les scores des GW terminees. Sur Hobby, l'heure exacte n'est pas garantie et la finalisation automatique des scores peut prendre jusqu'a 24 heures. Configurer `CRON_SECRET` dans les variables d'environnement de production Vercel ; Vercel l'envoie comme bearer token au cron. Les GW deja terminees sans snapshot de roster ne peuvent pas etre reconstruites de facon fiable a partir de l'equipe actuelle.
 
 ## Migration depuis l’ancien modèle
 
