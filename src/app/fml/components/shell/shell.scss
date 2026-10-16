@@ -1,0 +1,18 @@
+:host { display: block; }
+.fml-app { background: transparent; }
+.mobile-menu-toggle { display: none; }
+.mobile-navigation { width: min(300px, 85vw); background: #fff; }
+.mobile-menu-heading { display: flex; align-items: center; justify-content: space-between; padding: 1rem; }
+.mobile-navigation nav { display: flex; flex-direction: column; gap: .5rem; padding: 1rem; }
+.mobile-navigation nav > * { justify-content: flex-start; min-height: 48px; }
+.mobile-navigation .active { background: #e6f3eb; color: #075e3e; }
+.menu-icon { display: flex; flex-direction: column; gap: 5px; width: 22px; margin: auto; }
+.menu-icon span { height: 2px; background: currentColor; }
+
+@media (max-width: 850px) {
+  .fml-header { flex-wrap: nowrap; align-items: center; gap: .5rem; padding: .75rem 1rem; }
+  .brand { width: auto; min-width: 0; padding: 0; font-size: .9rem; }
+  .brand-mark { flex-shrink: 0; }
+  .fml-header .desktop-navigation { display: none; }
+  .mobile-menu-toggle { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; }
+}

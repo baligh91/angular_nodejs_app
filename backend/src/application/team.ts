@@ -11,7 +11,7 @@ export interface TeamInput {
   captainId: number;
 }
 
-const firstSeasonScoreGameweek = 6;
+const firstSeasonScoreGameweek = 7;
 
 export function firstScoringGameweek(events: Awaited<ReturnType<FplClient['bootstrap']>>): number {
   const current = events.find((event) => event.is_current);
@@ -180,6 +180,18 @@ export class TeamService {
     const count = standings.managers.length;
     const previousManagers = new Map((existingUser.team?.managers ?? [])
       .map((manager) => [manager.fplId, manager] as const));
+    const ownedManagers = [...previousManagers.values()].map((manager) => {
+      const current = standings.managers.find((candidate) => candidate.entry === manager.fplId);
+      return {
+        fplId: manager.fplId, price: current ? initialPrice(current.rank, count) : manager.price,
+        purchasePrice: manager.purchasePrice ?? manager.price,
+      };
+    });
+    const previousCapital = existingUser.team?.transferCapital ?? 250;
+    const budget = budgetWithAppreciation(ownedManagers, previousCapital);
+    const transferCapital = previousCapital + ownedManagers
+      .filter((manager) => !input.managerIds.includes(manager.fplId))
+      .reduce((total, manager) => total + manager.price - manager.purchasePrice, 0);
     const roster = managers.map((manager) => {
       const price = initialPrice(manager!.rank, count);
       const previous = previousManagers.get(manager!.entry);
@@ -188,9 +200,8 @@ export class TeamService {
         purchasePrice: previous?.purchasePrice ?? previous?.price ?? price,
       };
     });
-    const budget = budgetWithAppreciation(roster);
     const spent = roster.reduce((sum, manager) => sum + manager.price, 0);
-    if (spent > budget) throw new BadRequestException('The five managers exceed the 25M budget');
+    if (spent > budget) throw new BadRequestException('The five managers exceed the available transfer budget');
     if (gameweekEditsLocked(events)) {
       throw new ConflictException('Team changes are locked until the current gameweek finishes');
     }
@@ -203,7 +214,7 @@ export class TeamService {
     const team: UserTeam = {
       name: input.name.trim(), leagueFplId: input.leagueFplId, leagueName: standings.name,
       format: 5, firstScoringGw, managerIds: input.managerIds, captainId: input.captainId,
-      budget, spent, managers: roster,
+      budget, spent, transferCapital, managers: roster,
       pendingSnapshots: events.filter((event) => event.id >= firstScoringGw
         && !event.finished && Date.now() < Date.parse(event.deadline_time))
         .map((event) => ({
@@ -245,7 +256,7 @@ export class TeamService {
         };
       });
       spent = managers.reduce((total, manager) => total + manager.price, 0);
-      budget = budgetWithAppreciation(managers);
+      budget = budgetWithAppreciation(managers, team.transferCapital ?? 250);
     }
     const managerScores = includeLiveManagerScores && team
       ? await Promise.all(managers.map(async (manager) => [
@@ -277,7 +288,7 @@ export class TeamService {
       firstScoringGw: user.team?.firstScoringGw ?? null,
       format: 5, managerIds: user.team?.managerIds ?? [], captainId: user.team?.captainId ?? null,
       currentDeadline: current?.deadline_time ?? null,
-      budget, spent,
+      budget, spent, transferCapital: team?.transferCapital ?? 250,
       members: managers.map((manager) => {
         const score = scoresByManager.get(manager.fplId);
         return {

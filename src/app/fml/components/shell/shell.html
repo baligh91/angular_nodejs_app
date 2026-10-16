@@ -1,17 +1,36 @@
-<div class="fml-app">
+<mat-sidenav-container class="fml-app">
+  <mat-sidenav id="mobile-navigation" class="mobile-navigation" position="end" mode="over"
+    [fixedInViewport]="true" [(opened)]="mobileMenuOpen" role="dialog" aria-label="Navigation menu">
+    <div class="mobile-menu-heading">
+      <strong>Menu</strong>
+      <button mat-button (click)="mobileMenuOpen.set(false)" aria-label="Close navigation menu">Close</button>
+    </div>
+    <nav aria-label="Fantasy league mobile" (click)="mobileMenuOpen.set(false)">
+      <ng-container [ngTemplateOutlet]="navigation" />
+    </nav>
+  </mat-sidenav>
+  <mat-sidenav-content>
   <header class="fml-header">
     <a class="brand" routerLink="/fml"><span class="brand-mark">FML</span> Fantasy Manager League</a>
-    <nav class="flex flex-wrap gap-2" aria-label="Fantasy league">
+    <nav class="desktop-navigation" aria-label="Fantasy league">
+      <ng-container [ngTemplateOutlet]="navigation" />
+    </nav>
+    <button mat-icon-button class="mobile-menu-toggle" (click)="mobileMenuOpen.set(true)"
+      aria-label="Open navigation menu" aria-controls="mobile-navigation" [attr.aria-expanded]="mobileMenuOpen()">
+      <span class="menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+    </button>
+    <ng-template #navigation>
       @if (auth.authenticated()) {
         <a mat-button routerLink="/fml" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Dashboard</a>
         <a mat-button routerLink="/fml/team" routerLinkActive="active">My team</a>
         <button mat-button (click)="logout()">Disconnect FPL</button>
       } @else { <a mat-button routerLink="/fml/connect">Sign in</a> }
-    </nav>
+    </ng-template>
   </header>
   @if (notices.message()) {
     <div role="alert" class="notice"><span>{{notices.message()}}</span><button mat-button (click)="notices.message.set('')" aria-label="Dismiss notification">Dismiss</button></div>
   }
   <div class="fml-content"><router-outlet /></div>
   <footer>Pick managers. Build your legacy. Captain scores count double.</footer>
-</div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

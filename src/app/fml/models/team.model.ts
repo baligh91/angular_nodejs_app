@@ -28,6 +28,7 @@ export interface Team {
   managerIds: number[];
   captainId: number | null;
   budget: number;
+  transferCapital?: number;
   spent: number;
   members: Manager[];
   scores: TeamScore[];
@@ -47,9 +48,7 @@ export function selectionCost(managers: readonly Manager[]): number {
 export function squadBudget(
   managers: readonly Manager[], ownedManagers: readonly Manager[], baseBudget = BUDGETS[5],
 ): number {
-  const purchasePrices = new Map(ownedManagers.map((manager) => [
-    manager.fplId, manager.purchasePrice ?? manager.price,
-  ]));
-  return baseBudget + managers.reduce((total, manager) =>
-    total + Math.max(0, manager.price - (purchasePrices.get(manager.fplId) ?? manager.price)), 0);
+  const currentPrices = new Map(managers.map((manager) => [manager.fplId, manager.price]));
+  return Math.max(BUDGETS[5], baseBudget + ownedManagers.reduce((total, manager) =>
+    total + (currentPrices.get(manager.fplId) ?? manager.price) - (manager.purchasePrice ?? manager.price), 0));
 }

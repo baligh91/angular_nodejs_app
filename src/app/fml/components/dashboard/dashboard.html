@@ -1,26 +1,24 @@
-<div class="page-heading">
-    <div>
-        <p class="eyebrow">FANTASY MANAGER LEAGUE</p>
-        <h1>Team statistics</h1>
-        <p>Scores are refreshed when you open this page or select “Refresh scores”.</p>
-    </div>
-    @if (team()?.leagueFplId) { <button mat-flat-button (click)="sync()" [disabled]="loading()">{{loading() ?
-        'Updating…' : 'Refresh scores'}}</button> }
-</div>
+
 @if (loading() && !team()) { <p role="status">Loading your team…</p> }
 @if (failed()) { <p role="alert">Could not load data from FPL. <button mat-button (click)="load()">Retry</button></p> }
+
 @if (team(); as squad) {
 @if (squad.leagueFplId) {
 <section class="panel stats-grid">
     <div><span>Fantasy team</span><strong>{{squad.name}}</strong></div>
     <div><span>FPL league</span><strong>{{squad.leagueName}}</strong></div>
-    <div><span>Season points (GW 6+)</span><strong>{{squad.seasonScore | number}}</strong></div>
+    <div><span>Season points (GW 7+)</span><strong>{{squad.seasonScore | number}}</strong></div>
 </section>
+<div class="page-heading">
+
+    @if (team()?.leagueFplId) { <button mat-flat-button (click)="sync()" [disabled]="loading()">{{loading() ?
+        'Updating…' : 'Refresh scores'}}</button> }
+</div>
 <section class="panel">
     <div class="page-heading">
         <div>
             <p class="eyebrow">LEAGUE TABLE</p>
-            <h2>Fantasy team standings</h2>
+            <h2>Fantasy  team standings</h2>
             <p>Select a team name to see the five managers chosen in this app.</p>
         </div>
     </div>

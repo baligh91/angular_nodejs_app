@@ -12,7 +12,7 @@ export interface User {
 }
 export interface UserTeam {
   name: string; leagueFplId: number; leagueName: string; format: 5; firstScoringGw: number;
-  managerIds: number[]; captainId: number; budget: number; spent: number;
+  managerIds: number[]; captainId: number; budget: number; spent: number; transferCapital?: number;
   managers: { fplId: number; name: string; rank: number; price: number; purchasePrice?: number }[];
   pendingSnapshots: { gw: number; managerIds: number[]; captainId: number; teamName: string; capturedAt: Date }[];
 }
@@ -41,7 +41,7 @@ export class Database implements OnModuleInit, OnModuleDestroy {
         tokenVersion: { type: Number, default: 0 }, refreshHash: String, refreshExpires: Date,
         team: {
           name: String, leagueFplId: Number, leagueName: String, format: { type: Number, enum: [5] }, firstScoringGw: Number,
-          managerIds: [Number], captainId: Number, budget: Number, spent: Number,
+          managerIds: [Number], captainId: Number, budget: Number, spent: Number, transferCapital: Number,
           managers: [{ _id: false, fplId: Number, name: String, rank: Number, price: Number, purchasePrice: Number }],
           pendingSnapshots: [{ _id: false, gw: Number, managerIds: [Number], captainId: Number, teamName: String, capturedAt: Date }],
         },

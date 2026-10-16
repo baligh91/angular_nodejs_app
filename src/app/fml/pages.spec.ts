@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { Dashboard } from './components/dashboard/dashboard';
 import { TeamEditor } from './components/team-editor/team-editor';
 import { FplConnect } from './components/fpl-connect/fpl-connect';
+import { FmlShell } from './components/shell/shell';
 import { Auth } from './services/auth.service';
 import { Manager, Team } from './models';
 import { fplSession } from './test-fixtures';
@@ -29,6 +30,40 @@ describe('single-document FML workflow', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+
+  it('opens the mobile navigation on the right and closes it with its close button', async () => {
+    const fixture = TestBed.createComponent(FmlShell);
+    fixture.detectChanges();
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.mobile-menu-toggle');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(fixture.nativeElement.querySelector('mat-sidenav').classList.contains('mat-drawer-end')).toBe(true);
+    fixture.nativeElement.querySelector('[aria-label="Close navigation menu"]').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.mobileMenuOpen()).toBe(false);
+  });
+
+  it('shows authenticated links in the mobile menu and closes after selecting one', async () => {
+    TestBed.inject(Router).resetConfig([{ path: 'fml', children: [] }]);
+    TestBed.inject(Auth).user.set(fplSession.user);
+    const fixture = TestBed.createComponent(FmlShell);
+    fixture.detectChanges();
+    fixture.componentInstance.mobileMenuOpen.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const navigation: HTMLElement = fixture.nativeElement.querySelector('.mobile-navigation nav');
+    expect(navigation.textContent).toContain('Dashboard');
+    expect(navigation.textContent).toContain('My team');
+    expect(navigation.textContent).toContain('Disconnect FPL');
+    navigation.querySelector<HTMLAnchorElement>('a')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.mobileMenuOpen()).toBe(false);
+  });
 
   it('requires six password characters and shows the requirement below the field', () => {
     const fixture = TestBed.createComponent(FplConnect);
@@ -223,9 +258,16 @@ describe('single-document FML workflow', () => {
     expect(fixture.componentInstance.spent()).toBe(168);
     expect(fixture.nativeElement.textContent).toContain('32.1M');
     expect(fixture.nativeElement.textContent).toContain('15.3M');
+    fixture.componentInstance.selectManager(ownedManagers[0].fplId);
+    fixture.componentInstance.removeManager();
+    expect(fixture.componentInstance.totalBudget()).toBe(321);
+    fixture.componentInstance.selectEmptySlot(4);
+    expect(fixture.componentInstance.canAdd(managers[0].fplId)).toBe(true);
+    fixture.componentInstance.addManager(managers[0].fplId);
+    expect(fixture.componentInstance.totalBudget()).toBe(321);
   });
 
-  it('renders standings ranked by season scores from GW 6 and current GW scores', () => {
+  it('renders standings ranked by season scores from GW 7 and current GW scores', () => {
     const fixture = TestBed.createComponent(Dashboard);
     const initialSync = http.expectOne('/api/team/sync');
     expect(initialSync.request.method).toBe('POST');
@@ -243,7 +285,7 @@ describe('single-document FML workflow', () => {
       { rank: 3, ownerFplId: 123457, ownerName: 'Runner up', teamName: 'FML Runner Up', gw: 8, gwScore: 76, seasonScore: 90 },
     ]);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Season points (GW 6+)');
+    expect(fixture.nativeElement.textContent).toContain('Season points (GW 7+)');
     expect(fixture.nativeElement.textContent).toContain('Team');
     expect(fixture.nativeElement.textContent).toContain('GW 8');
     expect(fixture.nativeElement.textContent).toContain('Season');

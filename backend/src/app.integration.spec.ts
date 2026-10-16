@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { configureApp } from './bootstrap';
 import { Database } from './infrastructure/database';
 import { FplClient, FplEvent, FplProfile } from './infrastructure/fpl';
+import { TeamService } from './application/team';
 
 describe('single-document FML API', () => {
   let mongo: MongoMemoryServer;
@@ -148,19 +149,32 @@ describe('single-document FML API', () => {
     expect(secondSynced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 76, total: 76 })]);
     expect(thirdSynced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 80, total: 80 })]);
 
+    // Earlier gameweeks must not contribute to season standings, even with stored points.
+    await db.users.updateOne({ fplId: 72021 }, { $push: { scoreHistory: {
+      gw: 6, points: 999, total: 1105, managerIds, captainId: managerIds[0],
+      teamName: 'Excluded gameweek', capturedAt: new Date(),
+    } } });
+    events[2] = { ...events[2], id: 6 };
+    const beforeSeason = await request(app.getHttpServer()).get('/api/team/standings?leagueFplId=999001')
+      .set('Authorization', `Bearer ${token}`).expect(200);
+    expect(beforeSeason.body.every((row: { seasonScore: number }) => row.seasonScore === 0)).toBe(true);
+    const beforeSeasonTeam = await request(app.getHttpServer()).get('/api/team')
+      .set('Authorization', `Bearer ${token}`).expect(200);
+    expect(beforeSeasonTeam.body.seasonScore).toBe(0);
+
     for (const [fplId, points] of [[72021, 42], [72022, 21], [72023, 30]]) {
       await db.users.updateOne({ fplId }, { $push: { scoreHistory: {
-        gw: 6, points, total: points, managerIds: [], captainId: 1,
-        teamName: 'GW 6 test score', capturedAt: new Date(),
+        gw: 7, points, total: points, managerIds: [], captainId: 1,
+        teamName: 'GW 7 test score', capturedAt: new Date(),
       } } });
     }
-    events[2] = { ...events[2], id: 6 };
+    events[2] = { ...events[2], id: 7 };
     const standings = await request(app.getHttpServer()).get('/api/team/standings?leagueFplId=999001')
       .set('Authorization', `Bearer ${token}`).expect(200);
     expect(standings.body).toEqual([
-      expect.objectContaining({ rank: 1, ownerFplId: 72021, teamName: 'Five managers', gw: 6, gwScore: 36, seasonScore: 78 }),
-      expect.objectContaining({ rank: 2, ownerFplId: 72023, teamName: 'FML Third', gw: 6, gwScore: 20, seasonScore: 50 }),
-      expect.objectContaining({ rank: 3, ownerFplId: 72022, teamName: 'FML Runner Up', gw: 6, gwScore: 16, seasonScore: 37 }),
+      expect.objectContaining({ rank: 1, ownerFplId: 72021, teamName: 'Five managers', gw: 7, gwScore: 36, seasonScore: 78 }),
+      expect.objectContaining({ rank: 2, ownerFplId: 72023, teamName: 'FML Third', gw: 7, gwScore: 20, seasonScore: 50 }),
+      expect.objectContaining({ rank: 3, ownerFplId: 72022, teamName: 'FML Runner Up', gw: 7, gwScore: 16, seasonScore: 37 }),
     ]);
 
     events[2] = { ...events[2], id: 3 };
@@ -215,5 +229,33 @@ describe('single-document FML API', () => {
     const response = await request(app.getHttpServer()).get('/api/cron/sync')
       .set('Authorization', 'Bearer integration-cron-secret').expect(200);
     expect(response.body.updatedUsers).toBe(3);
+  });
+
+  it('preserves sale gains across transfers and applies subsequent losses with a 25M floor', async () => {
+    const original = await db.users.findOne({ fplId: 72021 }).lean();
+    const user = await db.users.create({
+      fplId: 72024, firstName: 'Transfer', lastName: 'Test', fplTeamName: 'Transfers',
+      passwordHash: 'unused-test-hash', team: original!.team, scoreHistory: [], totalScore: 0,
+    });
+    const teams = app.get(TeamService);
+    const managerIds = [90000001, 90000017, 90000018, 90000019, 90000020];
+    leagueManagers[15].rank = 1;
+    try {
+      const saved = await teams.save(user._id.toString(), {
+        name: 'Transfer team', leagueFplId: 999001, managerIds, captainId: managerIds[0],
+      });
+      expect(saved).toMatchObject({ budget: 321, transferCapital: 321, spent: 168 });
+      const again = await teams.save(user._id.toString(), {
+        name: 'Transfer team', leagueFplId: 999001, managerIds, captainId: managerIds[0],
+      });
+      expect(again.budget).toBe(321);
+      leagueManagers[0].rank = 2;
+      expect((await teams.mine(user._id.toString())).budget).toBe(316);
+      leagueManagers[0].rank = 20;
+      expect((await teams.mine(user._id.toString())).budget).toBe(250);
+    } finally {
+      leagueManagers[0].rank = 1;
+      leagueManagers[15].rank = 16;
+    }
   });
 });

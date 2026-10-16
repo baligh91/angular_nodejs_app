@@ -48,7 +48,9 @@ export class TeamEditor {
     leagueFplId: [0, [Validators.required, Validators.min(1), Validators.max(Number.MAX_SAFE_INTEGER)]],
   });
   readonly selected = computed(() => this.managers().filter((manager) => this.selectedIds().includes(manager.fplId)));
-  readonly totalBudget = computed(() => squadBudget(this.selected(), this.team()?.members ?? [], this.budget));
+  readonly totalBudget = computed(() => squadBudget(
+    this.managers(), this.team()?.members ?? [], this.team()?.transferCapital ?? this.budget,
+  ));
   readonly pitchManagers = computed(() => {
     const selected = this.selected();
     const captain = selected.find((manager) => manager.fplId === this.captainId());

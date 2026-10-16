@@ -10,13 +10,18 @@ describe('fantasy domain rules', () => {
   it('keeps only the five-manager format with a 25M budget', () => {
     expect(FORMATS).toEqual({ 5: 250 });
   });
-  it('adds only positive manager price gains to the minimum budget', () => {
+  it('uses net manager price gains with a minimum 25M budget', () => {
     expect(budgetWithAppreciation([
       { price: 100, purchasePrice: 29 },
       { price: 10, purchasePrice: 15 },
       { price: 24 },
-    ])).toBe(321);
+    ])).toBe(316);
     expect(budgetWithAppreciation([])).toBe(250);
+    expect(budgetWithAppreciation([{ price: 80, purchasePrice: 50 }])).toBe(280);
+    expect(budgetWithAppreciation([{ price: 70, purchasePrice: 50 }])).toBe(270);
+    expect(budgetWithAppreciation([{ price: 20, purchasePrice: 50 }])).toBe(250);
+    expect(budgetWithAppreciation([], 280)).toBe(280);
+    expect(budgetWithAppreciation([], 220)).toBe(250);
   });
   it('doubles only the captain and sums negative points', () => {
     expect(teamPoints(['a', 'b'], 'a', new Map([['a', 10], ['b', -2]]))).toBe(18);

@@ -2,7 +2,7 @@
     <div>
         <p class="eyebrow">FIVE-MANAGER SQUAD</p>
         <h1>{{team()?.leagueFplId ? 'Edit your team' : 'Build your team'}}</h1>
-        <p>Five managers · 25M budget · Pick a public FPL classic league.</p>
+        <p>Five managers · {{totalBudget() / 10 | number:'1.1-1'}}M transfer budget (minimum 25M) · Pick a public FPL classic league.</p>
     </div>
 </div>
 @if (loading()) { <p role="status">Loading your team and leagues…</p> }
