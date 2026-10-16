@@ -203,22 +203,26 @@ describe('single-document FML workflow', () => {
     http.expectNone((request) => request.method === 'PUT' && request.url === '/api/team');
   });
 
-  it('congratulates the user when the selected managers exceed the budget', () => {
-    const overBudgetTeam = {
+  it('adds manager price gains to the displayed squad budget', () => {
+    const ownedManagers = managers.slice(15).map((manager) => ({ ...manager, purchasePrice: manager.price }));
+    const currentManagers = managers.map((manager) => manager.fplId === ownedManagers[0].fplId
+      ? { ...manager, rank: 1, price: 100 } : manager);
+    const pricedTeam = {
       ...emptyTeam, name: 'My five', leagueName: 'First league', leagueFplId: 999001,
-      managerIds: managers.slice(0, 5).map((manager) => manager.fplId),
-      captainId: managers[0].fplId, members: managers.slice(0, 5),
+      managerIds: ownedManagers.map((manager) => manager.fplId),
+      captainId: ownedManagers[0].fplId, members: ownedManagers,
     };
     const fixture = TestBed.createComponent(TeamEditor);
-    http.expectOne('/api/team').flush(overBudgetTeam);
+    http.expectOne('/api/team').flush(pricedTeam);
     http.expectOne('/api/team/leagues').flush([{ id: 999001, name: 'First league' }]);
     http.expectOne('/api/team/managers?leagueFplId=999001').flush({
-      leagueFplId: 999001, leagueName: 'First league', managers,
+      leagueFplId: 999001, leagueName: 'First league', managers: currentManagers,
     });
     fixture.detectChanges();
-    expect(fixture.componentInstance.budget - fixture.componentInstance.spent()).toBeLessThan(0);
-    expect(fixture.nativeElement.textContent).toContain('Félicitations ! Tu as bien choisi les bons managers.');
-    expect(fixture.nativeElement.textContent).not.toContain('Remaining');
+    expect(fixture.componentInstance.totalBudget()).toBe(321);
+    expect(fixture.componentInstance.spent()).toBe(168);
+    expect(fixture.nativeElement.textContent).toContain('32.1M');
+    expect(fixture.nativeElement.textContent).toContain('15.3M');
   });
 
   it('renders standings ranked by season scores from GW 6 and current GW scores', () => {

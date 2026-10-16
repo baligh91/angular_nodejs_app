@@ -13,7 +13,7 @@ export interface User {
 export interface UserTeam {
   name: string; leagueFplId: number; leagueName: string; format: 5; firstScoringGw: number;
   managerIds: number[]; captainId: number; budget: number; spent: number;
-  managers: { fplId: number; name: string; rank: number; price: number }[];
+  managers: { fplId: number; name: string; rank: number; price: number; purchasePrice?: number }[];
   pendingSnapshots: { gw: number; managerIds: number[]; captainId: number; teamName: string; capturedAt: Date }[];
 }
 export interface UserScore {
@@ -42,7 +42,7 @@ export class Database implements OnModuleInit, OnModuleDestroy {
         team: {
           name: String, leagueFplId: Number, leagueName: String, format: { type: Number, enum: [5] }, firstScoringGw: Number,
           managerIds: [Number], captainId: Number, budget: Number, spent: Number,
-          managers: [{ _id: false, fplId: Number, name: String, rank: Number, price: Number }],
+          managers: [{ _id: false, fplId: Number, name: String, rank: Number, price: Number, purchasePrice: Number }],
           pendingSnapshots: [{ _id: false, gw: Number, managerIds: [Number], captainId: Number, teamName: String, capturedAt: Date }],
         },
         scoreHistory: [{ _id: false, gw: Number, points: Number, total: Number,

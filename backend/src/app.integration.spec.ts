@@ -23,10 +23,15 @@ describe('single-document FML API', () => {
     { id: 2, deadline_time: '2099-01-08T12:00:00Z', finished: false, is_current: false, data_checked: false },
     { id: 3, deadline_time: '2099-01-15T12:00:00Z', finished: false, is_current: false, data_checked: false },
   ];
+  const leagueManagers = Array.from({ length: 20 }, (_, index) => ({
+    entry: 90000001 + index, player_name: `Manager ${index + 1}`,
+    rank: index + 1, total: 1000 - index * 10, event_total: 10,
+  }));
 
   beforeAll(async () => {
     process.env.JWT_SECRET = 'integration-only-secret-at-least-32-characters';
     process.env.SYNC_ENABLED = 'false';
+    process.env.CRON_SECRET = 'integration-cron-secret';
     process.env.NODE_ENV = 'test';
     process.env.MONGOMS_DOWNLOAD_DIR = `${process.cwd()}\\.mongodb-binaries`;
     mongo = await MongoMemoryServer.create({ binary: { version: '7.0.14' } });
@@ -42,12 +47,7 @@ describe('single-document FML API', () => {
       currentGameweekPoints: id % 10, totalPoints: 1000 + id % 100,
     }));
     jest.spyOn(fpl, 'bootstrap').mockResolvedValue(events);
-    jest.spyOn(fpl, 'standings').mockResolvedValue({
-      name: 'Public league', managers: Array.from({ length: 20 }, (_, index) => ({
-        entry: 90000001 + index, player_name: `Manager ${index + 1}`,
-        rank: index + 1, total: 1000 - index * 10, event_total: 10,
-      })),
-    });
+    jest.spyOn(fpl, 'standings').mockImplementation(async () => ({ name: 'Public league', managers: leagueManagers }));
     jest.spyOn(fpl, 'history').mockImplementation(async (id) => [
       { event: 1, points: id === 90000016 ? 10 : 5, overall_rank: id },
       { event: 2, points: id - 90000000, overall_rank: id },
@@ -100,6 +100,15 @@ describe('single-document FML API', () => {
     await request(app.getHttpServer())
       .get('/api/team/league-team?leagueFplId=999002&ownerFplId=72021')
       .set('Authorization', `Bearer ${token}`).expect(404);
+
+    expect(saved.body.budget).toBe(250);
+    expect(saved.body.members[0]).toMatchObject({ price: 29, purchasePrice: 29 });
+    leagueManagers[15].rank = 1;
+    const repriced = await request(app.getHttpServer()).put('/api/team').set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Five managers', leagueFplId: 999001, managerIds, captainId: managerIds[0] }).expect(200);
+    expect(repriced.body).toMatchObject({ budget: 321, spent: 168 });
+    expect(repriced.body.members[0]).toMatchObject({ rank: 1, price: 100, purchasePrice: 29 });
+    leagueManagers[15].rank = 16;
 
     const sharedManagers = [90000011, 90000012, 90000013, 90000014, 90000015];
     const secondLogin = await request(app.getHttpServer()).post('/api/auth/register')
@@ -198,5 +207,13 @@ describe('single-document FML API', () => {
     await request(app.getHttpServer()).get('/api/team').set('Authorization', `Bearer ${token}`).expect(200);
     const jwt = app.get(JwtService);
     expect(jwt).toBeDefined();
+  });
+
+  it('protects and runs the scheduled score sync endpoint', async () => {
+    await request(app.getHttpServer()).get('/api/cron/sync')
+      .set('Authorization', 'Bearer invalid-cron-secret').expect(403);
+    const response = await request(app.getHttpServer()).get('/api/cron/sync')
+      .set('Authorization', 'Bearer integration-cron-secret').expect(200);
+    expect(response.body.updatedUsers).toBe(3);
   });
 });

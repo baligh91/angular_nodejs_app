@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { finalize, forkJoin } from 'rxjs';
 import { Api } from '../../services/api.service';
-import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost } from '../../models';
+import { FplLeague, Manager, ManagerLeague, Team, TeamInput, selectionCost, squadBudget } from '../../models';
 
 @Component({
   selector: 'app-team-editor',
@@ -48,6 +48,7 @@ export class TeamEditor {
     leagueFplId: [0, [Validators.required, Validators.min(1), Validators.max(Number.MAX_SAFE_INTEGER)]],
   });
   readonly selected = computed(() => this.managers().filter((manager) => this.selectedIds().includes(manager.fplId)));
+  readonly totalBudget = computed(() => squadBudget(this.selected(), this.team()?.members ?? [], this.budget));
   readonly pitchManagers = computed(() => {
     const selected = this.selected();
     const captain = selected.find((manager) => manager.fplId === this.captainId());
@@ -65,7 +66,7 @@ export class TeamEditor {
   readonly validation = computed(() => {
     if (this.selectedIds().length !== 5) return 'Select exactly five managers.';
     if (this.selected().length !== 5) return 'Load a league and select five available managers.';
-    if (this.spent() > this.budget) return 'The squad exceeds the 25M budget.';
+    if (this.spent() > this.totalBudget()) return 'The squad exceeds its available budget.';
     if (!this.selectedIds().includes(this.captainId() ?? 0)) return 'Choose a captain from your squad.';
     return '';
   });
@@ -190,13 +191,14 @@ export class TeamEditor {
   canReplace(replacementId: number): boolean {
     const active = this.activeManager();
     const replacement = this.managers().find((manager) => manager.fplId === replacementId);
-    return !this.editsLocked() && !!active && !!replacement && this.spent() - active.price + replacement.price <= this.budget;
+    return !this.editsLocked() && !!active && !!replacement
+      && this.spent() - active.price + replacement.price <= this.totalBudget();
   }
 
   canAdd(managerId: number): boolean {
     const manager = this.managers().find((candidate) => candidate.fplId === managerId);
     return !this.editsLocked() && this.activeEmptySlot() !== null && this.selectedIds().length < 5
-      && !!manager && this.spent() + manager.price <= this.budget;
+      && !!manager && this.spent() + manager.price <= this.totalBudget();
   }
 
   save(): void {

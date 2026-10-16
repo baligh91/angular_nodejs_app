@@ -43,3 +43,13 @@ export const BUDGETS: Record<5, number> = { 5: 250 };
 export function selectionCost(managers: readonly Manager[]): number {
   return managers.reduce((total, manager) => total + manager.price, 0);
 }
+
+export function squadBudget(
+  managers: readonly Manager[], ownedManagers: readonly Manager[], baseBudget = BUDGETS[5],
+): number {
+  const purchasePrices = new Map(ownedManagers.map((manager) => [
+    manager.fplId, manager.purchasePrice ?? manager.price,
+  ]));
+  return baseBudget + managers.reduce((total, manager) =>
+    total + Math.max(0, manager.price - (purchasePrices.get(manager.fplId) ?? manager.price)), 0);
+}

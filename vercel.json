@@ -5,6 +5,12 @@
   "installCommand": "npm ci && npm --prefix backend ci",
   "buildCommand": "npm run build && npm --prefix backend run build",
   "outputDirectory": "dist/angular-nodejs-app/browser",
+  "crons": [
+    {
+      "path": "/api/cron/sync",
+      "schedule": "0 * * * *"
+    }
+  ],
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 300

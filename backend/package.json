@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "start": "node --use-system-ca dist/main.js",
     "start:dev": "node scripts/dev.cjs",
     "test": "jest --runInBand",
     "test:integration": "jest --runInBand --testMatch \"**/*.integration.spec.ts\"",

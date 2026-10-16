@@ -51,6 +51,10 @@ npm run start:dev
 
 MongoDB standalone suffit : les opérations ne dépendent plus de transactions multi-collections. Valeurs locales par défaut : API sur le port 3000, Mongo `mongodb://127.0.0.1:27017/fml`, frontend `http://localhost:4200`.
 
+## Synchronisation en production
+
+Vercel appelle `/api/cron/sync` chaque heure pour capturer les rosters avant les deadlines et calculer les scores des GW terminees. Configurer `CRON_SECRET` dans les variables d'environnement de production Vercel ; Vercel l'envoie comme bearer token au cron. Les GW deja terminees sans snapshot de roster ne peuvent pas etre reconstruites de facon fiable a partir de l'equipe actuelle.
+
 ## Migration depuis l’ancien modèle
 
 La migration est en simulation par défaut et refuse les utilisateurs avec plusieurs équipes ou une équipe autre que format 5 :

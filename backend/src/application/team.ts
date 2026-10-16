@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
-import { initialPrice, teamPoints } from '../domain/rules';
+import { budgetWithAppreciation, initialPrice, teamPoints } from '../domain/rules';
 import { Database, User, UserTeam } from '../infrastructure/database';
 import { FplClient } from '../infrastructure/fpl';
 
@@ -178,11 +178,17 @@ export class TeamService {
       throw new BadRequestException('All selected managers must belong to the chosen FPL league');
     }
     const count = standings.managers.length;
-    const roster = managers.map((manager) => ({
-      fplId: manager!.entry, name: manager!.player_name, rank: manager!.rank,
-      price: initialPrice(manager!.rank, count),
-    }));
-    const budget = 250;
+    const previousManagers = new Map((existingUser.team?.managers ?? [])
+      .map((manager) => [manager.fplId, manager] as const));
+    const roster = managers.map((manager) => {
+      const price = initialPrice(manager!.rank, count);
+      const previous = previousManagers.get(manager!.entry);
+      return {
+        fplId: manager!.entry, name: manager!.player_name, rank: manager!.rank, price,
+        purchasePrice: previous?.purchasePrice ?? previous?.price ?? price,
+      };
+    });
+    const budget = budgetWithAppreciation(roster);
     const spent = roster.reduce((sum, manager) => sum + manager.price, 0);
     if (spent > budget) throw new BadRequestException('The five managers exceed the 25M budget');
     if (gameweekEditsLocked(events)) {
@@ -222,7 +228,25 @@ export class TeamService {
     const events = await this.fpl.bootstrap();
     const current = events.find((event) => event.is_current && !event.finished);
     const team = user.team;
-    const managers = team?.managers ?? [];
+    let managers = team?.managers ?? [];
+    let budget = team?.budget ?? 250;
+    let spent = team?.spent ?? 0;
+    if (team?.leagueFplId && managers.length) {
+      const standings = await this.fpl.standings(team.leagueFplId);
+      const count = standings.managers.length;
+      managers = managers.map((manager) => {
+        const currentManager = standings.managers.find((candidate) => candidate.entry === manager.fplId);
+        const purchasePrice = manager.purchasePrice ?? manager.price;
+        return {
+          fplId: manager.fplId, name: currentManager?.player_name ?? manager.name,
+          rank: currentManager?.rank ?? manager.rank,
+          price: currentManager ? initialPrice(currentManager.rank, count) : manager.price,
+          purchasePrice,
+        };
+      });
+      spent = managers.reduce((total, manager) => total + manager.price, 0);
+      budget = budgetWithAppreciation(managers);
+    }
     const managerScores = includeLiveManagerScores && team
       ? await Promise.all(managers.map(async (manager) => [
         manager.fplId, await this.fpl.managerScore(manager.fplId),
@@ -253,12 +277,12 @@ export class TeamService {
       firstScoringGw: user.team?.firstScoringGw ?? null,
       format: 5, managerIds: user.team?.managerIds ?? [], captainId: user.team?.captainId ?? null,
       currentDeadline: current?.deadline_time ?? null,
-      budget: user.team?.budget ?? 250, spent: user.team?.spent ?? 0,
+      budget, spent,
       members: managers.map((manager) => {
         const score = scoresByManager.get(manager.fplId);
         return {
           id: manager.fplId, fplId: manager.fplId, name: manager.name, rank: manager.rank,
-          price: manager.price, totalPoints: score?.totalPoints ?? 0,
+          price: manager.price, purchasePrice: manager.purchasePrice, totalPoints: score?.totalPoints ?? 0,
           lastGwPoints: score?.currentGameweekPoints ?? 0, gwPoints: score?.currentGameweekPoints ?? 0,
           form: score?.currentGameweekPoints ?? 0, currentGameweek: score?.currentGameweek ?? null,
           currentGameweekPoints: score?.currentGameweekPoints ?? 0,

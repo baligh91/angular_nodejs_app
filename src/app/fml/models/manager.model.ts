@@ -8,6 +8,7 @@ export interface Manager {
   gwPoints: number;
   form: number;
   price: number;
+  purchasePrice?: number;
   currentGameweek?: number | null;
   currentGameweekPoints?: number | null;
   priceHistory?: { gw: number; price: number; delta: number }[];

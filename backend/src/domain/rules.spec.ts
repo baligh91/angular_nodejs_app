@@ -1,4 +1,4 @@
-import { FORMATS, initialPrice, teamPoints } from './rules';
+import { budgetWithAppreciation, FORMATS, initialPrice, teamPoints } from './rules';
 
 describe('fantasy domain rules', () => {
   it('prices initial ranking linearly from 10M to 1M, including singleton', () => {
@@ -9,6 +9,14 @@ describe('fantasy domain rules', () => {
   });
   it('keeps only the five-manager format with a 25M budget', () => {
     expect(FORMATS).toEqual({ 5: 250 });
+  });
+  it('adds only positive manager price gains to the minimum budget', () => {
+    expect(budgetWithAppreciation([
+      { price: 100, purchasePrice: 29 },
+      { price: 10, purchasePrice: 15 },
+      { price: 24 },
+    ])).toBe(321);
+    expect(budgetWithAppreciation([])).toBe(250);
   });
   it('doubles only the captain and sums negative points', () => {
     expect(teamPoints(['a', 'b'], 'a', new Map([['a', 10], ['b', -2]]))).toBe(18);
