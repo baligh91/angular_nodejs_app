@@ -7,6 +7,8 @@ import { finalize, Subscription } from 'rxjs';
 import { Api } from '../../services/api.service';
 import { LeagueTeam, Team, TeamStanding } from '../../models';
 
+const FIRST_SCORING_GAMEWEEK = 7;
+
 @Component({
   selector: 'app-dashboard',
   imports: [MatButtonModule, DecimalPipe],
@@ -28,6 +30,9 @@ export class Dashboard {
   private leagueTeamRequest?: Subscription;
   constructor() { this.sync(); }
   load(): void { this.sync(); }
+  scoringGameweek(gameweek: number | null | undefined): number {
+    return Math.max(FIRST_SCORING_GAMEWEEK, gameweek ?? FIRST_SCORING_GAMEWEEK);
+  }
   sync(): void {
     if (this.loading()) return;
     this.loading.set(true);

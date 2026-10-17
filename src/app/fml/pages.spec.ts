@@ -269,6 +269,9 @@ describe('single-document FML workflow', () => {
 
   it('renders standings ranked by season scores from GW 7 and current GW scores', () => {
     const fixture = TestBed.createComponent(Dashboard);
+    expect(fixture.componentInstance.scoringGameweek(6)).toBe(7);
+    expect(fixture.componentInstance.scoringGameweek(null)).toBe(7);
+    expect(fixture.componentInstance.scoringGameweek(8)).toBe(8);
     const initialSync = http.expectOne('/api/team/sync');
     expect(initialSync.request.method).toBe('POST');
     initialSync.flush({

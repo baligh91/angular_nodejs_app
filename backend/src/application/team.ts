@@ -78,9 +78,10 @@ export class TeamService {
         const score = scoresByManager.get(manager.fplId);
         return {
           ...manager,
-          currentGameweekPoints: current && score?.currentGameweek === current.id
+          currentGameweekPoints: current && current.id >= FIRST_SCORING_GAMEWEEK
+            && score?.currentGameweek === current.id
             ? score.currentGameweekPoints
-            : null,
+            : current && current.id < FIRST_SCORING_GAMEWEEK ? 0 : null,
         };
       }),
     };
@@ -300,9 +301,12 @@ export class TeamService {
         return {
           id: manager.fplId, fplId: manager.fplId, name: manager.name, rank: manager.rank,
           price: manager.price, purchasePrice: manager.purchasePrice, totalPoints: score?.totalPoints ?? 0,
-          lastGwPoints: score?.currentGameweekPoints ?? 0, gwPoints: score?.currentGameweekPoints ?? 0,
-          form: score?.currentGameweekPoints ?? 0, currentGameweek: score?.currentGameweek ?? null,
-          currentGameweekPoints: score?.currentGameweekPoints ?? 0,
+          lastGwPoints: current && current.id < FIRST_SCORING_GAMEWEEK ? 0 : score?.currentGameweekPoints ?? 0,
+          gwPoints: current && current.id < FIRST_SCORING_GAMEWEEK ? 0 : score?.currentGameweekPoints ?? 0,
+          form: current && current.id < FIRST_SCORING_GAMEWEEK ? 0 : score?.currentGameweekPoints ?? 0,
+          currentGameweek: score?.currentGameweek ?? null,
+          currentGameweekPoints: current && current.id < FIRST_SCORING_GAMEWEEK
+            ? 0 : score?.currentGameweekPoints ?? 0,
         };
       }), scores, totalScore: seasonScore, seasonScore,
       editsLocked: gameweekEditsLocked(events),

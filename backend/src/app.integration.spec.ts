@@ -93,7 +93,7 @@ describe('single-document FML API', () => {
       ownerFplId: 72021, teamName: 'Five managers', captainId: managerIds[0],
       managers: expect.arrayContaining([
         expect.objectContaining({
-          fplId: managerIds[0], name: 'Manager 16', rank: 16, currentGameweekPoints: 6,
+          fplId: managerIds[0], name: 'Manager 16', rank: 16, currentGameweekPoints: 0,
         }),
       ]),
     });
@@ -137,7 +137,7 @@ describe('single-document FML API', () => {
     expect(synced.body.totalScore).toBe(0);
     expect(synced.body.seasonScore).toBe(0);
     expect(synced.body.members[0]).toMatchObject({
-      fplId: managerIds[0], currentGameweek: 3, currentGameweekPoints: 6, totalPoints: 1016,
+      fplId: managerIds[0], currentGameweek: 3, currentGameweekPoints: 0, totalPoints: 1016,
     });
 
     const secondSynced = await request(app.getHttpServer()).post('/api/team/sync')
@@ -161,6 +161,7 @@ describe('single-document FML API', () => {
     const beforeSeasonTeam = await request(app.getHttpServer()).get('/api/team')
       .set('Authorization', `Bearer ${token}`).expect(200);
     expect(beforeSeasonTeam.body.seasonScore).toBe(0);
+    expect(beforeSeasonTeam.body.members[0].currentGameweekPoints).toBe(0);
 
     for (const [fplId, points] of [[72021, 42], [72022, 21], [72023, 30]]) {
       await db.users.updateOne({ fplId }, { $push: { scoreHistory: {

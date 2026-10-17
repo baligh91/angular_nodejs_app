@@ -31,7 +31,7 @@
                 <tr>
                     <th scope="col" class="rank-column">Rank</th>
                     <th scope="col" class="team-column">Team</th>
-                    <th scope="col" class="numeric-column gw-column">GW {{standings()[0]?.gw ?? '—'}}</th>
+                    <th scope="col" class="numeric-column gw-column">GW {{scoringGameweek(standings()[0]?.gw)}}</th>
                     <th scope="col" class="numeric-column total-column">Total</th>
                 </tr>
             </thead>
@@ -78,8 +78,8 @@
                 <tr>
                     <th scope="col" class="manager-column">Manager</th>
                     <th scope="col" class="numeric-column">Rang FPL</th>
-                    <th scope="col" class="numeric-column">GW {{selectedStanding()?.gw ??
-                        squad.members[0]?.currentGameweek ?? '—'}} points</th>
+                    <th scope="col" class="numeric-column">GW {{scoringGameweek(selectedStanding()?.gw ??
+                        squad.members[0]?.currentGameweek)}} points</th>
                 </tr>
             </thead>
             <tbody>
