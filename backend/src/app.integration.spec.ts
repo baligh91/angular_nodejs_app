@@ -85,7 +85,7 @@ describe('single-document FML API', () => {
       .send({ name: 'Five managers', leagueFplId: 999001, managerIds, captainId: managerIds[0] }).expect(200);
     expect(saved.body).toMatchObject({ format: 5, spent: 97, members: expect.any(Array), totalScore: 0 });
     expect(saved.body.members).toHaveLength(5);
-    expect(saved.body.firstScoringGw).toBe(2);
+    expect(saved.body.firstScoringGw).toBe(7);
     const leagueTeam = await request(app.getHttpServer())
       .get('/api/team/league-team?leagueFplId=999001&ownerFplId=72021')
       .set('Authorization', `Bearer ${token}`).expect(200);
@@ -126,17 +126,15 @@ describe('single-document FML API', () => {
     await request(app.getHttpServer()).put('/api/team').set('Authorization', `Bearer ${token}`)
       .send({ name: 'Moved league', leagueFplId: 999002, managerIds, captainId: managerIds[0] }).expect(400);
     const beforeDeadline = await db.users.findOne({ fplId: 72021 }).lean();
-    expect(beforeDeadline?.team?.pendingSnapshots[0]).toMatchObject({
-      gw: 2, managerIds, captainId: managerIds[0], teamName: 'Five managers',
-    });
+    expect(beforeDeadline?.team?.pendingSnapshots).toEqual([]);
     events[0] = { ...events[0], finished: true, is_current: false, data_checked: true };
     events[1] = { ...events[1], finished: true, is_current: false, data_checked: true };
     events[2] = { ...events[2], is_current: true };
 
     const synced = await request(app.getHttpServer()).post('/api/team/sync')
       .set('Authorization', `Bearer ${token}`).expect(200);
-    expect(synced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 106, total: 106 })]);
-    expect(synced.body.totalScore).toBe(106);
+    expect(synced.body.scores).toEqual([]);
+    expect(synced.body.totalScore).toBe(0);
     expect(synced.body.seasonScore).toBe(0);
     expect(synced.body.members[0]).toMatchObject({
       fplId: managerIds[0], currentGameweek: 3, currentGameweekPoints: 6, totalPoints: 1016,
@@ -146,8 +144,10 @@ describe('single-document FML API', () => {
       .set('Authorization', `Bearer ${secondLogin.body.accessToken}`).expect(200);
     const thirdSynced = await request(app.getHttpServer()).post('/api/team/sync')
       .set('Authorization', `Bearer ${thirdLogin.body.accessToken}`).expect(200);
-    expect(secondSynced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 76, total: 76 })]);
-    expect(thirdSynced.body.scores).toEqual([expect.objectContaining({ gw: 2, points: 80, total: 80 })]);
+    expect(secondSynced.body.scores).toEqual([]);
+    expect(secondSynced.body.totalScore).toBe(0);
+    expect(thirdSynced.body.scores).toEqual([]);
+    expect(thirdSynced.body.totalScore).toBe(0);
 
     // Earlier gameweeks must not contribute to season standings, even with stored points.
     await db.users.updateOne({ fplId: 72021 }, { $push: { scoreHistory: {
@@ -180,13 +180,13 @@ describe('single-document FML API', () => {
     events[2] = { ...events[2], id: 3 };
     const user = await db.users.findOne({ fplId: 72021 }).lean();
     expect(user?.team?.managerIds).toEqual(managerIds);
-    expect(user?.team?.firstScoringGw).toBe(2);
-    expect(user?.team?.pendingSnapshots.map((snapshot) => snapshot.gw)).toEqual([3]);
+    expect(user?.team?.firstScoringGw).toBe(7);
+    expect(user?.team?.pendingSnapshots.map((snapshot) => snapshot.gw)).toEqual([]);
     await db.users.updateOne({ fplId: 72021 }, { $pull: { 'team.pendingSnapshots': { gw: 3 } } });
     await request(app.getHttpServer()).post('/api/team/sync')
       .set('Authorization', `Bearer ${token}`).expect(200);
     const resnapshotted = await db.users.findOne({ fplId: 72021 }).lean();
-    expect(resnapshotted?.team?.pendingSnapshots.map((snapshot) => snapshot.gw)).toEqual([3]);
+    expect(resnapshotted?.team?.pendingSnapshots.map((snapshot) => snapshot.gw)).toEqual([]);
     events[2] = { ...events[2], deadline_time: '2020-01-15T12:00:00Z', finished: false, is_current: true };
     const lockedView = await request(app.getHttpServer()).get('/api/team').set('Authorization', `Bearer ${token}`).expect(200);
     expect(lockedView.body.editsLocked).toBe(true);
@@ -217,7 +217,8 @@ describe('single-document FML API', () => {
   it('uses the JWT session for the embedded user document', async () => {
     const me = await request(app.getHttpServer()).get('/api/auth/me')
       .set('Authorization', `Bearer ${token}`).expect(200);
-    expect(me.body).toMatchObject({ fplId: 72021, totalScore: 106, team: { format: 5, firstScoringGw: 2 } });
+    expect(me.body).toMatchObject({ fplId: 72021, totalScore: 42, team: { format: 5, firstScoringGw: 7 } });
+    expect(me.body.scoreHistory.map((score: { gw: number }) => score.gw)).toEqual([7]);
     await request(app.getHttpServer()).get('/api/team').set('Authorization', `Bearer ${token}`).expect(200);
     const jwt = app.get(JwtService);
     expect(jwt).toBeDefined();

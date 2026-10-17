@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Database, User } from '../infrastructure/database';
 import { FplClient } from '../infrastructure/fpl';
+import { FIRST_SCORING_GAMEWEEK, scoringHistory } from '../domain/rules';
 import { firstScoringGameweek, scoreManagers } from './team';
 
 @Injectable()
@@ -26,8 +27,9 @@ export class ScoringService {
   async syncUser(user: User, events?: Awaited<ReturnType<FplClient['bootstrap']>>) {
     if (!user.team) return { scoresAdded: 0 };
     const currentEvents = events ?? await this.fpl.bootstrap();
-    const initialFirstScoringGw = user.team.firstScoringGw ?? firstScoringGameweek(currentEvents);
-    if (!user.team.firstScoringGw) {
+    const initialFirstScoringGw = Math.max(FIRST_SCORING_GAMEWEEK,
+      user.team.firstScoringGw ?? firstScoringGameweek(currentEvents));
+    if (user.team.firstScoringGw !== initialFirstScoringGw) {
       await this.db.users.updateOne({ _id: user._id }, { $set: { 'team.firstScoringGw': initialFirstScoringGw } });
       user.team.firstScoringGw = initialFirstScoringGw;
     }
@@ -49,14 +51,25 @@ export class ScoringService {
       ...(latestUser.scoreHistory ?? []).map((score) => score.gw),
       ...(latestUser.team.pendingSnapshots ?? []).map((snapshot) => snapshot.gw),
     ];
-    const firstScoringGw = latestUser.team.firstScoringGw
-      ?? (storedGameweeks.length ? Math.min(...storedGameweeks) : initialFirstScoringGw);
-    if (!latestUser.team.firstScoringGw) {
+    const firstScoringGw = Math.max(FIRST_SCORING_GAMEWEEK, latestUser.team.firstScoringGw
+      ?? (storedGameweeks.length ? Math.min(...storedGameweeks) : initialFirstScoringGw));
+    if (latestUser.team.firstScoringGw !== firstScoringGw) {
       await this.db.users.updateOne({ _id: latestUser._id }, { $set: { 'team.firstScoringGw': firstScoringGw } });
       latestUser.team.firstScoringGw = firstScoringGw;
     }
     const completed = currentEvents.filter((event) => event.finished && event.data_checked);
-    const pending = latestUser.team.pendingSnapshots || [];
+    const pending = (latestUser.team.pendingSnapshots || [])
+      .filter((snapshot) => snapshot.gw >= FIRST_SCORING_GAMEWEEK);
+    if (pending.length !== (latestUser.team.pendingSnapshots || []).length) {
+      await this.db.users.updateOne({ _id: latestUser._id }, {
+        $pull: { 'team.pendingSnapshots': { gw: { $lt: FIRST_SCORING_GAMEWEEK } } },
+      });
+    }
+    const seasonHistory = scoringHistory(latestUser.scoreHistory ?? []);
+    latestUser.totalScore = seasonHistory.reduce((total, score) => total + score.points, 0);
+    await this.db.users.updateOne({ _id: latestUser._id, disabled: false }, {
+      $set: { totalScore: latestUser.totalScore },
+    });
     const managerIds = [...new Set(pending.flatMap((snapshot) => snapshot.managerIds))];
     const managerHistory = await Promise.all(managerIds.map(async (id) => [id, await this.fpl.history(id)] as const));
     const histories = new Map(managerHistory);

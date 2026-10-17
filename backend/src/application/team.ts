@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
-import { budgetWithAppreciation, initialPrice, teamPoints } from '../domain/rules';
+import {
+  budgetWithAppreciation, FIRST_SCORING_GAMEWEEK, initialPrice, scoringHistory, teamPoints,
+} from '../domain/rules';
 import { Database, User, UserTeam } from '../infrastructure/database';
 import { FplClient } from '../infrastructure/fpl';
 
@@ -11,13 +13,12 @@ export interface TeamInput {
   captainId: number;
 }
 
-const firstSeasonScoreGameweek = 7;
-
 export function firstScoringGameweek(events: Awaited<ReturnType<FplClient['bootstrap']>>): number {
   const current = events.find((event) => event.is_current);
-  if (current) return current.id + 1;
+  if (current) return Math.max(FIRST_SCORING_GAMEWEEK, current.id + 1);
   const upcoming = events.filter((event) => !event.finished).map((event) => event.id);
-  return upcoming.length ? Math.min(...upcoming) : Math.max(0, ...events.map((event) => event.id)) + 1;
+  return Math.max(FIRST_SCORING_GAMEWEEK,
+    upcoming.length ? Math.min(...upcoming) : Math.max(0, ...events.map((event) => event.id)) + 1);
 }
 
 function gameweekEditsLocked(events: Awaited<ReturnType<FplClient['bootstrap']>>, now = Date.now()): boolean {
@@ -106,7 +107,7 @@ export class TeamService {
     const rows = users.map((user) => {
       const team = user.team!;
       let seasonScore = (user.scoreHistory ?? [])
-        .filter((score) => score.gw >= firstSeasonScoreGameweek)
+        .filter((score) => score.gw >= FIRST_SCORING_GAMEWEEK)
         .reduce((total, score) => total + score.points, 0);
       const currentSnapshot = current
         ? team.pendingSnapshots?.find((snapshot) => snapshot.gw === current.id)
@@ -127,10 +128,12 @@ export class TeamService {
       const currentScore = current && activeManagerIds.every((id) => livePoints.has(id))
         ? scoreManagers(activeManagerIds, currentSnapshot?.captainId ?? team.captainId, livePoints)
         : null;
-      if (current && current.id >= firstSeasonScoreGameweek && currentScore !== null) {
+      if (current && current.id >= FIRST_SCORING_GAMEWEEK && currentScore !== null) {
         seasonScore += currentScore;
       }
-      const gwScore = currentScore ?? completedScore?.points ?? 0;
+      const gwScore = gw !== null && gw >= FIRST_SCORING_GAMEWEEK
+        ? currentScore ?? completedScore?.points ?? 0
+        : 0;
       return {
         ownerFplId: user.fplId,
         ownerName: `${user.firstName} ${user.lastName}`.trim(),
@@ -209,8 +212,8 @@ export class TeamService {
       ...(existingUser.scoreHistory ?? []).map((score) => score.gw),
       ...(existingUser.team?.pendingSnapshots ?? []).map((snapshot) => snapshot.gw),
     ];
-    const firstScoringGw = existingUser.team?.firstScoringGw
-      ?? (storedGameweeks.length ? Math.min(...storedGameweeks) : firstScoringGameweek(events));
+    const firstScoringGw = Math.max(FIRST_SCORING_GAMEWEEK, existingUser.team?.firstScoringGw
+      ?? (storedGameweeks.length ? Math.min(...storedGameweeks) : firstScoringGameweek(events)));
     const team: UserTeam = {
       name: input.name.trim(), leagueFplId: input.leagueFplId, leagueName: standings.name,
       format: 5, firstScoringGw, managerIds: input.managerIds, captainId: input.captainId,
@@ -279,13 +282,16 @@ export class TeamService {
         currentScore = scoreManagers(managerIds, captainId, points);
       }
     }
-    const completedSeasonScore = (user.scoreHistory ?? [])
-      .filter((score) => score.gw >= firstSeasonScoreGameweek)
-      .reduce((total, score) => total + score.points, 0);
+    const scores = scoringHistory(user.scoreHistory ?? []);
+    const completedSeasonScore = scores.reduce((total, score) => total + score.points, 0);
+    const seasonScore = completedSeasonScore
+      + (current && current.id >= FIRST_SCORING_GAMEWEEK ? currentScore ?? 0 : 0);
     return {
       id: user.fplId, fplId: user.fplId, name: user.team?.name ?? '',
       leagueFplId: user.team?.leagueFplId ?? null, leagueName: user.team?.leagueName ?? '',
-      firstScoringGw: user.team?.firstScoringGw ?? null,
+      firstScoringGw: user.team
+        ? Math.max(FIRST_SCORING_GAMEWEEK, user.team.firstScoringGw ?? FIRST_SCORING_GAMEWEEK)
+        : null,
       format: 5, managerIds: user.team?.managerIds ?? [], captainId: user.team?.captainId ?? null,
       currentDeadline: current?.deadline_time ?? null,
       budget, spent, transferCapital: team?.transferCapital ?? 250,
@@ -298,9 +304,7 @@ export class TeamService {
           form: score?.currentGameweekPoints ?? 0, currentGameweek: score?.currentGameweek ?? null,
           currentGameweekPoints: score?.currentGameweekPoints ?? 0,
         };
-      }), scores: user.scoreHistory ?? [], totalScore: user.totalScore ?? 0,
-      seasonScore: completedSeasonScore
-        + (current && current.id >= firstSeasonScoreGameweek ? currentScore ?? 0 : 0),
+      }), scores, totalScore: seasonScore, seasonScore,
       editsLocked: gameweekEditsLocked(events),
     };
   }

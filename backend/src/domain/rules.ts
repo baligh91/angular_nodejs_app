@@ -1,5 +1,31 @@
 export const FORMATS = { 5: 250 } as const;
+export const FIRST_SCORING_GAMEWEEK = 7;
 export type Format = 5;
+
+export interface ScoringRecord {
+  gw: number;
+  points: number;
+  total: number;
+  managerIds: number[];
+  captainId: number;
+  teamName: string;
+  capturedAt: Date;
+}
+
+export function scoringHistory(scores: readonly ScoringRecord[]): ScoringRecord[] {
+  let total = 0;
+  return Array.from(scores, (score) => ({
+    gw: score.gw, points: score.points, total: score.total,
+    managerIds: [...score.managerIds], captainId: score.captainId,
+    teamName: score.teamName, capturedAt: score.capturedAt,
+  }))
+    .filter((score) => score.gw >= FIRST_SCORING_GAMEWEEK)
+    .sort((a, b) => a.gw - b.gw)
+    .map((score) => {
+      total += score.points;
+      return { ...score, total };
+    });
+}
 
 export function initialPrice(rank: number, count: number): number {
   if (count <= 1) return 100;

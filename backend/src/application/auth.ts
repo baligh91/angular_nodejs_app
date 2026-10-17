@@ -9,6 +9,7 @@ import { Types } from 'mongoose';
 import { Database, User } from '../infrastructure/database';
 import { Config } from '../infrastructure/config';
 import { FplClient } from '../infrastructure/fpl';
+import { FIRST_SCORING_GAMEWEEK, scoringHistory } from '../domain/rules';
 
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const derivePasswordKey = (password: string, salt: string) => new Promise<Buffer>((resolve, reject) => {
@@ -30,10 +31,15 @@ const verifyPassword = async (password: string, encoded: string) => {
 export const Public = () => SetMetadata('public', true);
 
 export function userView(user: User) {
+  const scoreHistory = scoringHistory(user.scoreHistory ?? []);
   return {
     id: user._id.toString(), fplId: user.fplId, firstName: user.firstName,
-    lastName: user.lastName, fplTeamName: user.fplTeamName, fplLeagues: user.fplLeagues, team: user.team,
-    scoreHistory: user.scoreHistory, totalScore: user.totalScore,
+    lastName: user.lastName, fplTeamName: user.fplTeamName, fplLeagues: user.fplLeagues,
+    team: user.team ? {
+      ...user.team,
+      firstScoringGw: Math.max(FIRST_SCORING_GAMEWEEK, user.team.firstScoringGw ?? FIRST_SCORING_GAMEWEEK),
+    } : user.team,
+    scoreHistory, totalScore: scoreHistory.reduce((total, score) => total + score.points, 0),
   };
 }
 
